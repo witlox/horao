@@ -1,3 +1,9 @@
+//! Datacenter hardware (compute & storage)
+//!
+//! This module contains the definition of compute/storage equipment (hardware) and their properties.
+//! We assume that 'faulty' equipment state is either up or down. We do not consider intermediate states.
+//! Faulty state will be handled in the state machine, not here.
+
 pub struct DataCenter {
     name: String,
     number: i64,
@@ -29,8 +35,7 @@ pub struct Chassis {
 
 pub enum ServerStatus {
     Up,
-    Down,
-    Degraded
+    Down
 }
 
 pub struct Server {
