@@ -1,0 +1,6 @@
+[log]
+level = "info"
+
+[gossip]
+protocol = "anti-entropy"
+type = "push"

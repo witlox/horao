@@ -1,0 +1,33 @@
+[package]
+name = "horao"
+version = "0.0.1"
+authors = ["Pim Witlox"]
+edition = "2021"
+
+[dependencies]
+lazy_static = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+config = "0.13"
+home = "0.5"
+clap = "4.4"
+dirs = "5.0"
+
+[lib]
+name = "libhorao"
+test = true
+doctest = true
+bench = false
+doc = true
+
+[[bin]]
+name = "horao"
+test = false
+doctest = false
+bench = false
+doc = true
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
