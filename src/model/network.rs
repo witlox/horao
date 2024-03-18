@@ -1,8 +1,7 @@
 //! Networking equipment
 //!
 //! This module contains the definition of networking equipment (hardware) and their properties.
-//! We assume that 'faulty' equipment state is either up or down. We do not consider intermediate states.
-//! Faulty state will be handled in the state machine, not here.
+//! We assume that 'faulty' equipment state is either up or down, it should be handled in the state machine, not here.
 
 pub enum NetworkTopology {
     Tree, // (low-radix) tree topology, or star-bus topology, in which star networks are interconnected via bus networks
