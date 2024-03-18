@@ -2,6 +2,9 @@
 //!
 //! This module contains the definition of compute/storage equipment (hardware) and their properties.
 //! We assume that 'faulty' equipment state is either up or down, it should be handled in a state machine, not here.
+//! Also we assume that these data structures are not very prone to change, given that this implies a manual activity.
+
+use crate::model::status::DeviceStatus;
 
 pub struct DataCenter {
     name: String,
@@ -32,11 +35,6 @@ pub struct Chassis {
     servers: Vec<Server>
 }
 
-pub enum ServerStatus {
-    Up,
-    Down
-}
-
 pub struct Server {
     serial_number: String,
     name: String,
@@ -47,7 +45,7 @@ pub struct Server {
     disk: Vec<Disk>,
     nic: Vec<NIC>,
     accelerator: Vec<Accelorator>,
-    status: ServerStatus
+    status: DeviceStatus
 }
 
 pub struct RAM {
@@ -66,8 +64,9 @@ pub struct NIC {
     model: String,
     number: i64,
     mac: String,
-    link_status: LinkStatus,
-    port_speed_gbps: i64
+    link_status: DeviceStatus,
+    port_speed_gbps: i64,
+    number_of_ports: i64
 }
 
 pub struct CPU {

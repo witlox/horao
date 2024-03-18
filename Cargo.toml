@@ -11,6 +11,7 @@ config = "0.13"
 home = "0.5"
 clap = "4.4"
 dirs = "5.0"
+petgraph = "0.6.4"
 
 [lib]
 name = "libhorao"

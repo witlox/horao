@@ -1,13 +1,18 @@
-///
-/// Library containing the entrypoint for all logic.
-/// The executable is a wrapper around the library functions.
-///
+//! Library containing the entrypoint for all logic.
+//! The executable is a wrapper around the library functions.
+
 #[macro_use]
 extern crate lazy_static;
 
 mod settings;
 use settings::Settings;
 
+pub mod model {
+    pub mod status;
+    pub mod hardware;
+    pub mod network;
+    pub mod osi_layers;
+}
 
 lazy_static! {
     pub static ref CONFIG: Settings = match Settings::new() {
@@ -28,10 +33,9 @@ lazy_static! {
 /// add_two(1, 2)
 ///
 /// ```
-/// let r = liblimen::add_two(3, 4);
+/// let r = libhorao::add_two(3, 4);
 /// assert_eq!(r, 7);
 /// ```
 pub fn add_two(a: i32, b: i32) -> i32 {
     return a + b;
 }
-

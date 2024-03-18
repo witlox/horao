@@ -1,10 +1,11 @@
-/// Configration File handles and settings
-/// We allow for multiple configuration files in the configuration directory.
-/// Each file represents a given runtime environment:
-/// Default.toml loads our defaults.
-/// Development.toml overrides the settings from default when on a development environment (e.g. local)
-/// Testing.toml overrides the settings from default in regards to integration testing.
-/// Production.toml overrides any production specific settings.
+//! Configration File handles and settings
+//! We allow for multiple configuration files in the configuration directory.
+//! Each file represents a given runtime environment:
+//! Default.toml loads our defaults.
+//! Development.toml overrides the settings from default when on a development environment (e.g. local)
+//! Testing.toml overrides the settings from default in regards to integration testing.
+//! Production.toml overrides any production specific settings.
+
 extern crate dirs;
 
 use config::{ Config, ConfigError, Environment, File };
@@ -12,9 +13,7 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use std::env;
 
-///
 /// Standard search locations for configuration files
-///
 static SYS_CONF_DIR: &str = "/etc/horao";
 fn get_usr_conf_dir () -> Option<PathBuf> {
     match dirs::home_dir() {
@@ -28,9 +27,7 @@ fn get_usr_conf_dir () -> Option<PathBuf> {
     }
 }
 
-///
 /// Items that can be defined in our Settings
-///
 #[derive(Debug, Deserialize)]
 #[allow(unused)]
 pub struct Log {
@@ -41,7 +38,6 @@ pub struct Log {
 #[allow(unused)]
 pub struct Gossip {
     pub protocol: String,
-    pub type: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -51,9 +47,7 @@ pub struct Settings {
     gossip: Gossip,
 }
 
-///
 /// Settings loader
-///
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
