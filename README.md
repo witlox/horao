@@ -17,26 +17,7 @@ There are various resources that are relatively dynamic, such as virtual machine
 We look for a configuration file in the following spots (and again the lower the number in this list, the higher the precedence):
 
 1. custom: as a parameter passed to the application (--config)
-2. user: ~/.config/limen/config.yaml
-3. system: /etc/limen/config.yaml
+2. user: ~/.config/horao/config.yaml
+3. system: /etc/horao/config.yaml
 
 **_Note_** if partial information exists in multiple files the precedence defines which value is actually chosen.
-
-```
-if 2 configuration files exist, system and user, with the following contents:
-
-system
-  secret: abcd
-  redis: redis://localhost
-
-user
-  secret: efgh
-  ntp: check
-
-the resulting configuration would be:
-
-runtime
-  secret: efgh
-  ntp: check
-  redis: redis://localhost
-```
