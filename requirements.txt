@@ -1,0 +1,5 @@
+setuptools
+gunicorn
+flask-marshmallow
+flask-cors
+connexion[swagger-ui]

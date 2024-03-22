@@ -11,13 +11,3 @@ There are various resources that are relatively static, such as physical devices
 ## Reasonably 'dynamic' resources
 
 There are various resources that are relatively dynamic, such as virtual machines. These resources are usually created and destroyed frequently, and the management of these resources is usually done by a large group of people.
-
-## Configuration file
-
-We look for a configuration file in the following spots (and again the lower the number in this list, the higher the precedence):
-
-1. custom: as a parameter passed to the application (--config)
-2. user: ~/.config/horao/config.yaml
-3. system: /etc/horao/config.yaml
-
-**_Note_** if partial information exists in multiple files the precedence defines which value is actually chosen.
