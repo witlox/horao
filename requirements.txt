@@ -2,4 +2,4 @@ setuptools
 gunicorn
 flask-marshmallow
 flask-cors
-connexion[swagger-ui]
+connexion[flask,swagger-ui]
