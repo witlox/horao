@@ -5,14 +5,11 @@ info:
   version: "1.0.0"
   title: "Connexion example"
   contact:
-    email: "pim@witlox.io"
-host: "0.0.0.0:8081"
-basePath: "/v1/basic"
+    name: "Pim Witlox"
+basePath: "/api/v1"
 tags:
   - name: "alive"
     description: "Keepalive"
-schemes:
-  - "http"
 produces:
   - "application/json"
 consumes:
@@ -29,4 +26,4 @@ paths:
       responses:
         200:
           description: "is alive"
-      x-swagger-router-controller: "basic.controllers.alive_controller"
+      x-swagger-router-controller: "horao.controllers.alive_controller"
