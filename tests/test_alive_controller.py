@@ -9,7 +9,7 @@ from tests import base_url
 @pytest.fixture(scope="module")
 def client():
     ia = init_api()
-    with ia.app.app.test_client() as c:
+    with ia.app.test_client() as c:
         yield c
 
 

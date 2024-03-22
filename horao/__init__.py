@@ -7,6 +7,7 @@ from flask_marshmallow import Marshmallow
 
 ma = Marshmallow()
 
+
 def init_api():
     app = connexion.App(__name__, specification_dir="./swagger/")
     app.add_api("swagger.yaml", arguments={"title": "files"})
