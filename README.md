@@ -11,3 +11,19 @@ There are various resources that are relatively static, such as physical devices
 ## Reasonably 'dynamic' resources
 
 There are various resources that are relatively dynamic, such as virtual machines. These resources are usually created and destroyed frequently, and the management of these resources is usually done by a large group of people.
+
+## Swagger definition
+
+Swagger definition is available at the following URL:
+
+```http
+http://localhost:8081/v1/swagger.json
+```
+
+## Launch tests
+
+After enabling your virtual environment, run the following command:
+
+```bash
+tox
+```

@@ -21,7 +21,16 @@ class Protocol(Enum):
 
 
 class Port:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, mac: str, status: DeviceStatus, speed_gb: int):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        mac: str,
+        status: DeviceStatus,
+        speed_gb: int,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -46,7 +55,15 @@ class Route:
 
 
 class FirewallRule:
-    def __init__(self, name: str, action: str, source: IpAddress, destination: IpAddress, protocol: Protocol, port: int):
+    def __init__(
+        self,
+        name: str,
+        action: str,
+        source: IpAddress,
+        destination: IpAddress,
+        protocol: Protocol,
+        port: int,
+    ):
         self.name = name
         self.action = action
         self.source = source

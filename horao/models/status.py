@@ -3,6 +3,7 @@
 
 from enum import Enum, auto
 
+
 class DeviceStatus(Enum):
     Up = auto()
     Down = auto()

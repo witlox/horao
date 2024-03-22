@@ -1,7 +1,0 @@
-flask_testing
-coverage
-nose
-pluggy
-py
-randomize
-mockito

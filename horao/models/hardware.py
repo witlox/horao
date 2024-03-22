@@ -9,7 +9,16 @@ from status import DeviceStatus
 
 
 class RAM:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, size_gb: int, speed_mhz: int, usage_gb: int):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        size_gb: int,
+        speed_mhz: int,
+        usage_gb: int,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -20,7 +29,17 @@ class RAM:
 
 
 class NIC:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, mac: str, link_status: DeviceStatus, port_speed_gbps: int, number_of_ports: int):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        mac: str,
+        link_status: DeviceStatus,
+        port_speed_gbps: int,
+        number_of_ports: int,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -32,7 +51,16 @@ class NIC:
 
 
 class CPU:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, clock_speed: int, cores: int, features: str):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        clock_speed: int,
+        cores: int,
+        features: str,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -43,7 +71,16 @@ class CPU:
 
 
 class Accelerator:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, memory_gb: int, chip: str, clock_speed: int):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        memory_gb: int,
+        chip: str,
+        clock_speed: int,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -54,7 +91,15 @@ class Accelerator:
 
 
 class Disk:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, size_gb: int, usage_gb: int):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        size_gb: int,
+        usage_gb: int,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -64,7 +109,19 @@ class Disk:
 
 
 class Server:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, cpu: list[CPU], ram: list[RAM], disk: list[Disk], nic: list[NIC], accelerator: list[Accelerator], status: DeviceStatus):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        cpu: list[CPU],
+        ram: list[RAM],
+        disk: list[Disk],
+        nic: list[NIC],
+        accelerator: list[Accelerator],
+        status: DeviceStatus,
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -85,7 +142,14 @@ class Row:
 
 
 class Chassis:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, servers: list[Server]):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        servers: list[Server],
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
@@ -94,7 +158,15 @@ class Chassis:
 
 
 class Cabinet:
-    def __init__(self, serial_number: str, name: str, model: str, number: int, servers: list[Server], chassis: list[Chassis]):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        servers: list[Server],
+        chassis: list[Chassis],
+    ):
         self.serial_number = serial_number
         self.name = name
         self.model = model

@@ -1,18 +1,18 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-#
 
-from __future__ import absolute_import
+import pytest
 
-from tests import BaseTestCase
-
-
-class BaseTestAliveController(BaseTestCase):
-    def test_get_alive(self):
-        response = self.client.open("/v1/basic/ping", method="GET")
-        self.assert200(response)
+from horao import init_api
+from tests import base_url
 
 
-if __name__ == "__main__":
-    import unittest
+@pytest.fixture(scope="module")
+def client():
+    ia = init_api()
+    with ia.app.app.test_client() as c:
+        yield c
 
-    unittest.main()
+
+def test_ping_service(client):
+    lg = client.get(base_url("ping"))
+    assert 200 == lg.status_code
