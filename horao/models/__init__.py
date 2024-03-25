@@ -9,7 +9,16 @@ from horao.models.osi_layers import (
     IpAddress,
     Route,
 )
-from horao.models.network import Router, Switch, Firewall, DataCenterNetwork
+from horao.models.network import (
+    Router,
+    RouterType,
+    Switch,
+    SwitchType,
+    Firewall,
+    DataCenterNetwork,
+    NetworkType,
+    NetworkTopology
+)
 from horao.models.hardware import (
     RAM,
     NIC,

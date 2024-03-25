@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-#
-# Networking equipment
-#
-# This module contains the definition of networking equipment (hardware) and their properties.
-# We assume that 'faulty' equipment state is either up or down, it should be handled in the state machine, not here.
-# Also we assume that these data structures are not very prone to change, given that this implies a manual activity.
+"""Networking equipment
+
+This module contains the definition of networking equipment (hardware) and their properties.
+We assume that 'faulty' equipment state is either up or down, it should be handled in the state machine, not here.
+Also we assume that these data structures are not very prone to change, given that this implies a manual activity.
+"""
 
 from enum import Enum, auto
+
+import networkx as nx
 
 
 from horao.models.status import DeviceStatus
@@ -13,6 +16,7 @@ from horao.models.osi_layers import Port, LinkLayer
 
 
 class NetworkTopology(Enum):
+    """Network topologies that should be able to manage."""
     Tree = (
         auto()
     )  # (low-radix) tree topology, or star-bus topology, in which star networks are interconnected via bus networks
@@ -80,31 +84,29 @@ class RouterType(Enum):
 
 class SwitchType(Enum):
     Access = auto()
-    Distribution = auto()  # also know as Aggregation
+    Distribution = auto()  # also known as Aggregation
     Core = auto()
 
 
-class Firewall:
-    def __init__(
-        self,
-        serial_number: str,
-        name: str,
-        model: str,
-        number: int,
-        status: DeviceStatus,
-        lan_ports: list[Port],
-        wan_ports: list[Port],
-    ):
+class NetworkDevice:
+    def __init__(self, serial_number, name, model, number, lan_ports: list[Port]):
         self.serial_number = serial_number
         self.name = name
         self.model = model
         self.number = number
-        self.status = status
         self.lan_ports = lan_ports
+
+
+class Firewall(NetworkDevice):
+    def __init__(self, serial_number: str, name: str, model: str, number: int, status: DeviceStatus,
+                 lan_ports: list[Port], wan_ports: list[Port]):
+
+        super().__init__(serial_number, name, model, number, lan_ports)
+        self.status = status
         self.wan_ports = wan_ports
 
 
-class Router:
+class Router(NetworkDevice):
     def __init__(
         self,
         serial_number: str,
@@ -116,17 +118,13 @@ class Router:
         lan_ports: list[Port],
         wan_ports: list[Port],
     ):
-        self.serial_number = serial_number
-        self.name = name
-        self.model = model
-        self.number = number
+        super().__init__(serial_number, name, model, number, lan_ports)
         self.router_type = router_type
         self.status = status
-        self.lan_ports = lan_ports
         self.wan_ports = wan_ports
 
 
-class Switch:
+class Switch(NetworkDevice):
     def __init__(
         self,
         serial_number: str,
@@ -140,15 +138,11 @@ class Switch:
         lan_ports: list[Port],
         uplink_ports: list[Port],
     ):
-        self.serial_number = serial_number
-        self.name = name
-        self.model = model
-        self.number = number
+        super().__init__(serial_number, name, model, number, lan_ports)
         self.layer = layer
         self.switch_type = switch_type
         self.status = status
         self.managed = managed
-        self.lan_ports = lan_ports
         self.uplink_ports = uplink_ports
 
 
@@ -157,16 +151,35 @@ class DataCenterNetwork:
         self,
         name: str,
         network_type: NetworkType,
-        switches: list[Switch],
-        routers: list[Router],
-        firewalls: list[Firewall],
     ):
+        self.graph = nx.Graph()
         self.name = name
         self.network_type = network_type
-        self.switches = switches
-        self.routers = routers
-        self.firewalls = firewalls
-        self.topology = NetworkTopology.Undefined
+
+    def add(self, network_device: NetworkDevice):
+        self.graph.add_node(network_device)
+
+    def add_multiple(self, network_devices: list[NetworkDevice]):
+        for network_device in network_devices:
+            self.add(network_device)
+
+    def link(self, left: NetworkDevice, right: NetworkDevice):
+        """
+        Link two network devices
+        :param left: device (if uplink ports exist, they are used to connect to other devices)
+        :param right: device
+        :return: None
+        """
+        if isinstance(left, Switch):
+            # We assume that switches are connected via uplink ports, and that these ports are the same speed
+            for port in left.uplink_ports:
+                self.graph.add_edge(left, right, port=port)
+        else:
+            port = next(iter(left.lan_ports))
+            if port:
+                self.graph.add_edge(left, right, port=port)
 
     def get_topology(self) -> NetworkTopology:
+        if nx.is_tree(self.graph):
+            return NetworkTopology.Tree
         return NetworkTopology.Undefined

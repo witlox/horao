@@ -10,9 +10,10 @@ Steps:
 
 ## Note on testing
 
+In order to install the testing dependencies you can run the following command `pip install -r test-requirements.txt`.
 You can run the tests using the `tox` command. This will run the tests in a virtual environment and ensure that the tests are run in a clean environment.
 
 ```bash
-pip install tox
+pip install -r test-requirements.txt
 tox
 ```
