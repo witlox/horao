@@ -27,5 +27,6 @@ http://localhost:8081/v1/swagger.json
 After enabling your virtual environment, run the following command:
 
 ```bash
+pip install tox
 tox
 ```

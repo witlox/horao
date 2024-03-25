@@ -3,8 +3,16 @@
 Steps:
 
 1. Install Python 3.11 or higher
-2. Create a virtual environment under the root folder of this project (`python -m venv venv`)
-3. Activate the environment (`source ./venv/bin/activate`)
+2. Create a virtual environment under the root folder of this project (`python -m venv .venv`)
+3. Activate the environment (`source .venv/bin/activate`)
 4. Install the required packages (`pip install -r requirements.txt`)
-5. Install the test packages (`pip install -r requirements-test.txt`)
-6. Run the project (`python main.py`)
+5. Run the project (`python horao/main.py`)
+
+## Note on testing
+
+You can run the tests using the `tox` command. This will run the tests in a virtual environment and ensure that the tests are run in a clean environment.
+
+```bash
+pip install tox
+tox
+```
