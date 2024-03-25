@@ -1,0 +1,6 @@
+tox
+black
+mypy
+pytest
+coverage
+testcontainers[redis]

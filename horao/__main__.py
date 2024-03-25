@@ -6,7 +6,7 @@ from horao import init_api
 
 def main():
     app = init_api()
-    app.run(port=8081, debug=False)
+    app.run(port=8081)
 
 
 if __name__ == "__main__":

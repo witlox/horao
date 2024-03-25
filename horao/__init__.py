@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-#
 
-import connexion
-from flask_cors import CORS
-from flask_marshmallow import Marshmallow
+import horao.controllers
+import horao.models
 
-ma = Marshmallow()
+from connexion import AsyncApp  # type: ignore
 
 
 def init_api():
-    app = connexion.App(__name__, specification_dir="./swagger/")
-    app.add_api("swagger.yaml", arguments={"title": "files"})
-    CORS(app.app)
-    ma.init_app(app.app)
+    app = AsyncApp(__name__)
+    app.add_api("./swagger/swagger.yaml")
     return app

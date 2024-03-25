@@ -12,4 +12,4 @@ COPY horao /usr/src/app
 EXPOSE 8081
 
 ENTRYPOINT [ "gunicorn" ]
-CMD ["-w", "2", "-b", "0.0.0.0:8081", "wsgi:application"]
+CMD ["-w", "2", "-b", "0.0.0.0:8081", "ASGI_APP"]

@@ -5,7 +5,7 @@
 # We assume that 'faulty' equipment state is either up or down, it should be handled in a state machine, not here.
 # Also we assume that these data structures are not very prone to change, given that this implies a manual activity.
 
-from status import DeviceStatus
+from horao.models.status import DeviceStatus
 
 
 class RAM:

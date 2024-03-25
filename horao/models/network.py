@@ -8,8 +8,8 @@
 from enum import Enum, auto
 
 
-from status import DeviceStatus
-from osi_layers import Port, LinkLayer
+from horao.models.status import DeviceStatus
+from horao.models.osi_layers import Port, LinkLayer
 
 
 class NetworkTopology(Enum):

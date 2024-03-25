@@ -6,7 +6,7 @@
 
 from enum import Enum, auto
 
-from status import DeviceStatus
+from horao.models.status import DeviceStatus
 
 
 class LinkLayer(Enum):
