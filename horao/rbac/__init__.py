@@ -52,12 +52,16 @@ class Permissions(ABC):
             yield permission
 
     def can_read(self, namespace: Namespace):
+        if namespace not in self.permissions.keys():
+            return False
         return (
             self.permissions[namespace] == Permission.Read
             or self.permissions[namespace] == Permission.Write
         )
 
     def can_write(self, namespace: Namespace):
+        if namespace not in self.permissions.keys():
+            return False
         return self.permissions[namespace] == Permission.Write
 
 
