@@ -1,0 +1,47 @@
+openapi: 3.0.0
+info:
+  title: JWT Example
+  version: '1.0'
+paths:
+  /login:
+    post:
+      summary: Login and return JWT token
+      operationId: horao.auth.basic_auth.generate_token
+      parameters:
+      - name: user
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: password
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: JWT token
+          content:
+            'text/plain':
+              schema:
+                type: string
+  /ping:
+    get:
+      summary: keepalive
+      operationId: horao.api.alive_controller
+      responses:
+        '200':
+          description: secret response
+          content:
+            'text/plain':
+              schema:
+                type: string
+      security:
+      - jwt: ['secret']
+components:
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-bearerInfoFunc: app.decode_token

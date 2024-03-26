@@ -5,3 +5,4 @@ connexion[swagger-ui]
 a2wsgi
 networkx
 python-dotenv
+python-jose[cryptography]
