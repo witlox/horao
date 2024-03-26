@@ -185,9 +185,10 @@ class DataCenterNetwork:
         """
         Link two network devices, if they are switches, they are connected via uplink ports, if they are routers or
         firewalls, they are connected via lan ports. We use 'the first' lan port if no uplink ports are available. We
-        currently do not keep count of port usage.
+        currently do not keep count of port usage. There is currently no explicit link that is tracked for the
+        connection, we 'simply' pick the first available port.
         :param left: device (if uplink ports exist, they are used to connect to other devices)
-        :param right: device
+        :param right: device (lan ports are used to connect to other devices)
         :return: None
         :raises: ValueError if no free ports are available on either device.
         """

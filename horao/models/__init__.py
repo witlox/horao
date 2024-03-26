@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-#
+"""Models used by HORAO
+
+This module contains the classes that are used to model the hardware and software resources of the system.
+"""
 from horao.models.status import DeviceStatus
 from horao.models.osi_layers import (
     LinkLayer,

@@ -4,3 +4,4 @@ gunicorn
 connexion[swagger-ui]
 a2wsgi
 networkx
+python-dotenv
