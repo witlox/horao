@@ -1,6 +1,4 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-#
-
 import horao.api
 import horao.controllers
 import horao.models

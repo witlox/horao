@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-#
-# [`OSI`] layers
-# This module contains the definition of networking activities and their properties.
-# We assume that these data structures are prone to change, given that these are configuration artifacts.
-# [`OSI`]: https://en.wikipedia.org/wiki/OSI_model
+"""OSI layers
 
+This module contains the definition of networking activities and their properties.
+We assume that these data structures are prone to change, given that these are configuration artifacts.
+OSI: https://en.wikipedia.org/wiki/OSI_model
+"""
 from enum import Enum, auto
 
 from horao.models.status import DeviceStatus

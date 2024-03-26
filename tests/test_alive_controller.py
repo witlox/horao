@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-#
-
 import pytest
 
 from horao import init_api

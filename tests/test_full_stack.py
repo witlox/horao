@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-#
-
 import pytest
 
 from testcontainers.redis import RedisContainer

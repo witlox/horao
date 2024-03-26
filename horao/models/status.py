@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-#
-# States that we are able to manage
-
+"""States that we are able to manage"""
 from enum import Enum, auto
 
 

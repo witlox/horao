@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-#
-
 from horao.models.status import DeviceStatus
 from horao.models.osi_layers import (
     LinkLayer,
