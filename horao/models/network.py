@@ -8,7 +8,7 @@ Also we assume that these data structures are not very prone to change, given th
 
 from enum import Enum, auto
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 
 from horao.models.status import DeviceStatus
@@ -17,6 +17,7 @@ from horao.models.osi_layers import Port, LinkLayer
 
 class NetworkTopology(Enum):
     """Network topologies that should be able to manage."""
+
     Tree = (
         auto()
     )  # (low-radix) tree topology, or star-bus topology, in which star networks are interconnected via bus networks
@@ -98,8 +99,16 @@ class NetworkDevice:
 
 
 class Firewall(NetworkDevice):
-    def __init__(self, serial_number: str, name: str, model: str, number: int, status: DeviceStatus,
-                 lan_ports: list[Port], wan_ports: list[Port]):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        status: DeviceStatus,
+        lan_ports: list[Port],
+        wan_ports: list[Port],
+    ):
 
         super().__init__(serial_number, name, model, number, lan_ports)
         self.status = status

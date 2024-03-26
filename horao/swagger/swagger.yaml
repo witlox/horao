@@ -26,4 +26,4 @@ paths:
       responses:
         200:
           description: "is alive"
-      x-swagger-router-controller: "horao.controllers.alive_controller"
+      x-swagger-router-controller: "horao.api.alive_controller"

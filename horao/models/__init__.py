@@ -17,7 +17,7 @@ from horao.models.network import (
     Firewall,
     DataCenterNetwork,
     NetworkType,
-    NetworkTopology
+    NetworkTopology,
 )
 from horao.models.hardware import (
     RAM,
