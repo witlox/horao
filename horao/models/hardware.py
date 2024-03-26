@@ -197,21 +197,31 @@ class DataCenter:
         server.disk.remove(old_disk)
         server.disk.append(new_disk)
 
-    def fetch_server_nic(self, row: int, cabinet: int, server: int, nic: int, chassis: int = None) -> NIC:
+    def fetch_server_nic(
+        self,
+        row: int,
+        cabinet: int,
+        server: int,
+        nic: int,
+        chassis: Optional[int]
+    ) -> NIC:
         """
-        Fetch a port from a server NIC, will throw a ValueError if any of the indexes is out of bounds
+        Fetch a port from a server NIC
         :param row: Row in DC
         :param cabinet: Cabinet in Row
         :param server: Server in Cabinet/Chassis
         :param nic: NIC in Server
         :param chassis: Chassis in Cabinet (optional)
         :return: NIC object
+        :raises: ValueError if any of the indexes is out of bounds
         """
         if row >= len(self.rows):
             raise ValueError("Row does not exist")
         if cabinet >= len(self.rows[row].cabinets):
             raise ValueError("Cabinet does not exist")
-        if chassis is not None and chassis >= len(self.rows[row].cabinets[cabinet].chassis):
+        if chassis is not None and chassis >= len(
+            self.rows[row].cabinets[cabinet].chassis
+        ):
             raise ValueError("Chassis does not exist")
         if server >= len(self.rows[row].cabinets[cabinet].servers):
             raise ValueError("Server does not exist")

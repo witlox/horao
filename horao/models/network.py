@@ -17,82 +17,53 @@ from horao.models.osi_layers import Port, LinkLayer
 
 class NetworkTopology(Enum):
     """Network topologies that should be able to manage."""
+
     # (low-radix) tree topology, or star-bus topology, in which star networks are interconnected via bus networks
-    Tree = (
-        auto()
-    )
+    Tree = auto()
     # (low-radix, clos) scales to support huge data centers with uniform high capacity between servers,
     # performance isolation between services, and Ethernet layer-2 semantics
-    VL2 = (
-        auto()
-    )
+    VL2 = auto()
     # (high-radix, clos, AlFares) provides a scalable and cost-effective interconnection of servers in modern data
     # centers, interconnecting commodity switches in a fat-tree architecture achieves the full bisection bandwidth
     # of clusters
-    FatTree = (
-        auto()
-    )
+    FatTree = auto()
     # (high-radix, fat-tree) scalable, fault-tolerant layer 2 routing and forwarding protocol for data center
     # environments
-    Portland = (
-        auto()
-    )
+    Portland = auto()
     # (high-radix, fat-tree) dynamic flow scheduling system that adaptively schedules a multi-stage switching
     # fabric to efficiently utilize aggregate network resources
-    Hedera = (
-        auto()
-    )
+    Hedera = auto()
     # (low-radix, recursive) a recursively defined structure, in which a high-level DCell is constructed from many
     # low-level DCells and DCells at the same level are fully connected with one another
-    DCell = (
-        auto()
-    )
+    DCell = auto()
     # (low-radix, recursive) a new network architecture specifically designed for shipping-container based, modular
     # data centers
-    BCube = (
-        auto()
-    )
+    BCube = auto()
     # (low-radix, recursive) a high performance interconnection structure to scale BCube-based containers to mega-data
     # centers
-    MDCube = (
-        auto()
-    )
+    MDCube = auto()
     # (low-radix, recursive) utilizes both ports and only the low-end commodity switches to form a scalable and highly
     # effective structure
-    FiConn = (
-        auto()
-    )
+    FiConn = auto()
     # (low-radix, flexible, fully optical) leverage runtime reconfigurable optical devices to dynamically changes its
     # topology and link capacities to adapt to dynamic traffic patterns
-    OSA = (
-        auto()
-    )
+    OSA = auto()
     # (low-radix, flexible, hybrid) responsibility for traffic demand estimation and traffic de-multiplexing resides
     # in end hosts, making it compatible with existing packet switches
-    CThrough = (
-        auto()
-    )
+    CThrough = auto()
     # (low-radix, flexible, hybrid) hybrid electrical/optical switch architecture that can deliver significant
     # reductions in the number of switching elements, cabling, cost, and power consumption
-    Helios = (
-        auto()
-    )
+    Helios = auto()
     # (high-radix, dragonfly) completely connected router groups, each pair of router groups has one or multiple
     # global optical connection, each pair of routers in the same router group has a single local connection
-    DragonFly = (
-        auto()
-    )
+    DragonFly = auto()
     # (high-radix, dragonfly) enhanced DragonFly (1D), replaces the router group with a flattened butterfly 2D
     # connected group, where every two groups can be connected by one or multiple global connections
-    DragonFlyPlus = (
-        auto()
-    )
+    DragonFlyPlus = auto()
     # (high-radix, dragonfly) enhanced DragonFly (1D), each router group contains two subgroups of switches: leaf
     # switches or spine switches. Spine switches are directly connected to spines of the other router groups, leaf
     # switches are connected to the spine switches in the same group
-    Slingshot = (
-        auto()
-    )
+    Slingshot = auto()
     # No specific topology has been resolved
     Undefined = auto()
 
@@ -131,12 +102,8 @@ class NetworkDevice:
 
 class NIC(NetworkDevice):
     def __init__(
-            self,
-            serial_number: str,
-            name: str,
-            model: str,
-            number: int,
-            ports: List[Port]):
+        self, serial_number: str, name: str, model: str, number: int, ports: List[Port]
+    ):
         super().__init__(serial_number, name, model, number, ports)
 
 
@@ -224,20 +191,28 @@ class DataCenterNetwork:
         :return: None
         :raises: ValueError if no free ports are available on either device.
         """
+
         def link_free_ports(lp: Port, rp: Port) -> None:
             if not lp:
-                raise ValueError(f"No free ports available on {left.name} ({left.number}:{left.serial_number})")
+                raise ValueError(
+                    f"No free ports available on {left.name} ({left.number}:{left.serial_number})"
+                )
             # We assume that switches are connected via uplink ports, and that these ports are the same speed
             if not rp:
-                raise ValueError(f"No free ports available on {right.name} ({right.number}:{right.serial_number})")
-            self.graph.add_edge(lp, rp, port=lp)
+                raise ValueError(
+                    f"No free ports available on {right.name} ({right.number}:{right.serial_number})"
+                )
+            self.graph.add_edge(left, right, port=lp)
             lp.status = DeviceStatus.Up
             rp.status = DeviceStatus.Up
+
         if isinstance(left, Switch) and any(left.uplink_ports):
             left_port = next(iter(left.uplink_ports), None)
         else:
             left_port = next(iter(left.lan_ports), None)
-        right_port = next(iter([p for p in right.lan_ports if p.status == DeviceStatus.Down]), None)
+        right_port = next(
+            iter([p for p in right.lan_ports if p.status == DeviceStatus.Down]), None
+        )
         link_free_ports(left_port, right_port)
 
     def unlink(self, left: NetworkDevice, right: NetworkDevice) -> None:
