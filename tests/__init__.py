@@ -92,17 +92,7 @@ def basic_networking_configuration():
                 25,
             )
         ],
-        [
-            Port(
-                "ser6",
-                "lp1",
-                "lsp",
-                1,
-                "m4",
-                DeviceStatus.Down,
-                100
-            )
-        ],
+        [Port("ser6", "lp1", "lsp", 1, "m4", DeviceStatus.Down, 100)],
     )
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
     dcn.add_multiple([core, leaf_left, leaf_right])

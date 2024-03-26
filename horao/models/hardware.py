@@ -161,8 +161,9 @@ class DataCenter:
         self.number = number
         self.rows = rows
 
-    @staticmethod
-    def move_server(server: Server, from_cabinet: Cabinet, to_cabinet: Cabinet) -> None:
+    def move_server(
+        self, server: Server, from_cabinet: Cabinet, to_cabinet: Cabinet
+    ) -> None:
         """
         Move a server from one cabinet to another
         :param server: server to move
@@ -198,12 +199,7 @@ class DataCenter:
         server.disk.append(new_disk)
 
     def fetch_server_nic(
-        self,
-        row: int,
-        cabinet: int,
-        server: int,
-        nic: int,
-        chassis: Optional[int]
+        self, row: int, cabinet: int, server: int, nic: int, chassis: Optional[int]
     ) -> NIC:
         """
         Fetch a port from a server NIC
