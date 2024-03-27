@@ -18,14 +18,11 @@ from connexion.options import SwaggerUIOptions  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 
 
-module_root = os.path.dirname(os.path.dirname(__file__))
-
-environment = os.environ.get("ENVIRONMENT", "development")
-dotenv_path = module_root + "/env/" + f".env.{environment}"
-spec = module_root + "/spec/" + f"{environment}.yaml"
-
-
 def init_api():
+    module_root = os.path.dirname(os.path.dirname(__file__))
+    environment = os.environ.get("ENVIRONMENT", "development")
+    dotenv_path = module_root + "/horao/env/" + f".env.{environment}"
+    spec = module_root + "/horao/spec/" + f"{environment}.yaml"
     load_dotenv(dotenv_path)
     if bool(os.getenv("UI", False)):
         options = SwaggerUIOptions(swagger_ui_path="/docs")

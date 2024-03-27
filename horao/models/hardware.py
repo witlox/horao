@@ -187,16 +187,25 @@ class DataCenter:
         to_chassis.servers.append(server)
 
     @staticmethod
-    def swap_disk(server: Server, old_disk: Disk, new_disk: Disk) -> None:
+    def swap_disk(
+        server: Server, old_disk: Optional[Disk], new_disk: Optional[Disk]
+    ) -> None:
         """
         Swap a (broken) disk in a server
         :param server: server to swap disk from/in
-        :param old_disk: old disk to remove
-        :param new_disk: new disk to add
+        :param old_disk: old disk to remove (if any)
+        :param new_disk: new disk to add (if any)
         :return: None
+        :raises: ValueError if you try to remove a disk that doesn't exist
         """
-        server.disk.remove(old_disk)
-        server.disk.append(new_disk)
+        if new_disk is not None:
+            if not server.disk:
+                server.disk = []
+            server.disk.append(new_disk)
+        if old_disk:
+            if not server.disk:
+                raise ValueError("Cannot remove disks that are not installed.")
+            server.disk.remove(old_disk)
 
     def fetch_server_nic(
         self, row: int, cabinet: int, server: int, nic: int, chassis: Optional[int]
@@ -209,7 +218,7 @@ class DataCenter:
         :param nic: NIC in Server
         :param chassis: Chassis in Cabinet (optional)
         :return: NIC object
-        :raises: ValueError if any of the indexes is out of bounds
+        :raises: ValueError if any of the indexes are out of bounds
         """
         if row >= len(self.rows):
             raise ValueError("Row does not exist")

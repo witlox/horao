@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: JWT Example
+  title: HORAO - Development
   version: '1.0'
 paths:
   /login:
@@ -44,4 +44,4 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      x-bearerInfoFunc: app.decode_token
+      x-bearerInfoFunc: horao.auth.basic_auth.decode_token

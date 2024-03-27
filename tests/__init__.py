@@ -17,10 +17,6 @@ from horao.models.network import (
 )
 
 
-def base_url(url):
-    return f"/api/v1/{url}"
-
-
 def basic_networking_configuration():
     """
     This function returns a basic networking configuration for testing purposes

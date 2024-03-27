@@ -2,5 +2,5 @@ tox
 black
 mypy
 pytest
-coverage
+pytest-cov
 testcontainers[redis]

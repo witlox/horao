@@ -207,14 +207,15 @@ class DataCenterNetwork:
             lp.status = DeviceStatus.Up
             rp.status = DeviceStatus.Up
 
-        if isinstance(left, Switch) and any(left.uplink_ports):
+        if isinstance(left, Switch) and left.uplink_ports and any(left.uplink_ports):
             left_port = next(iter(left.uplink_ports), None)
         else:
             left_port = next(iter(left.lan_ports), None)
         right_port = next(
             iter([p for p in right.lan_ports if p.status == DeviceStatus.Down]), None
         )
-        link_free_ports(left_port, right_port)
+        if left_port and right_port:
+            link_free_ports(left_port, right_port)
 
     def unlink(self, left: NetworkDevice, right: NetworkDevice) -> None:
         self.graph.remove_edge(left, right)

@@ -8,8 +8,8 @@ import os
 import time
 from typing import Optional, Dict
 
-from jose import JWTError, jwt
-from werkzeug.exceptions import Unauthorized
+from jose import JWTError, jwt  # type: ignore
+from werkzeug.exceptions import Unauthorized  # type: ignore
 
 from horao.auth import UnauthenticatedError
 
