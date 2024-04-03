@@ -1,8 +1,6 @@
 setuptools
 uvicorn
-gunicorn
-connexion[swagger-ui]
-a2wsgi
 networkx
 python-dotenv
-python-jose[cryptography]
+starlette
+opentelemetry-instrumentation-starlette

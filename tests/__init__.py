@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-#
+import os
+from base64 import b64encode
+
 from horao.models import (
     Switch,
     LinkLayer,
@@ -15,6 +18,20 @@ from horao.models.network import (
     DataCenterNetwork,
     NetworkType,
 )
+
+
+os.environ["ENVIRONMENT"] = "development"
+
+
+def basic_auth(username, password) -> str:
+    """
+    This function returns a basic auth token for the given username and password
+    :param username: user
+    :param password: pass
+    :return: token
+    """
+    token = b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    return f"Basic {token}"
 
 
 def basic_networking_configuration():

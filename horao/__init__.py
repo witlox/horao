@@ -8,35 +8,78 @@ platforms like Kubernetes, OpenStack, Slurm, Clouds, etc. are defined here. The 
 and software resources of the system.
 """
 import os
+import logging
+
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.responses import HTMLResponse
+from starlette.routing import Route
 
 import horao.api
+import horao.auth
 import horao.controllers
 import horao.models
 
-from connexion import AsyncApp  # type: ignore
-from connexion.options import SwaggerUIOptions  # type: ignore
+
+from starlette.applications import Starlette  # type: ignore
+from starlette.middleware import Middleware  # type: ignore
+from starlette.middleware.cors import CORSMiddleware  # type: ignore
+from starlette.schemas import SchemaGenerator  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 
+from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware  # type: ignore
 
-def init_api():
+from horao.auth.basic_auth import BasicAuthBackend
+
+schemas = SchemaGenerator(
+    {"openapi": "3.0.0", "info": {"title": "HORAO API", "version": "1.0"}}
+)
+
+
+def openapi_schema(request):
+    return schemas.OpenAPIResponse(request=request)
+
+
+async def docs(request):
+    html = f"""
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>HORAO - Redoc</title>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+          </head>
+          <body>
+            <redoc spec-url="{request.url.scheme}://{request.url.netloc}/openapi.json"></redoc>
+            <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
+          </body>
+        </html>
+    """
+    return HTMLResponse(html)
+
+
+def init_api() -> Starlette:
+    cors = os.getenv("CORS", "*")
+    if cors == "*":
+        logging.warning("CORS is set to *")
+    routes = [
+        Route("/ping", endpoint=horao.api.alive_controller.is_alive, methods=["GET"]),
+        Route("/openapi.json", endpoint=openapi_schema, include_in_schema=False),
+    ]
     module_root = os.path.dirname(os.path.dirname(__file__))
     environment = os.environ.get("ENVIRONMENT", "development")
     dotenv_path = module_root + "/horao/env/" + f".env.{environment}"
-    spec = module_root + "/horao/spec/" + f"{environment}.yaml"
     load_dotenv(dotenv_path)
     if bool(os.getenv("UI", False)):
-        options = SwaggerUIOptions(swagger_ui_path="/docs")
-        app = AsyncApp(__name__, swagger_ui_options=options)
-        app.add_api(
-            spec,
-            arguments={"debug": bool(os.getenv("DEBUG", False))},
-            swagger_ui_options=options,
+        routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
+    middleware = [
+        Middleware(CORSMiddleware, allow_origins=[cors]),
+        Middleware(OpenTelemetryMiddleware),
+    ]
+    if os.getenv("AUTH", "basic") == "basic":
+        middleware.append(
+            Middleware(AuthenticationMiddleware, backend=BasicAuthBackend())
         )
-        return app
-    else:
-        app = AsyncApp(__name__)
-        app.add_api(
-            spec,
-            arguments={"debug": bool(os.getenv("DEBUG", False))},
-        )
-        return app
+    return Starlette(
+        routes=routes, middleware=middleware, debug=bool(os.getenv("DEBUG", False))
+    )

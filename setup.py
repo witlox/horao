@@ -12,7 +12,7 @@ VERSION = "1.0.0"
 # prerequisite: setuptools
 # http://pypi.python.org/pypi/setuptools
 
-REQUIRES = ["connexion"]
+REQUIRES = ["Starlette"]
 
 setup(
     name=NAME,
@@ -20,13 +20,10 @@ setup(
     description="HORAO - management engine for hybrid multi-cloud environments",
     author_email="pim@witlox.io",
     url="",
-    keywords=["Swagger", "Connexion"],
+    keywords=["OpenAPI", "Starlette"],
     install_requires=REQUIRES,
     packages=find_packages(),
-    package_data={"": ["spec/production.yaml"]},
-    include_package_data=True,
-    entry_points={"console_scripts": ["swagger_server=swagger_server.__main__:main"]},
     long_description="""\
-    Basic example to connexion
+    Management engine for hybrid multi-cloud environments
     """,
 )

@@ -4,14 +4,13 @@
 Very basic auth module, DO NOT USE IN PRODUCTION!
 Meant for development purpose only.
 """
+import base64
 import os
-import time
-from typing import Optional, Dict
 
-from jose import JWTError, jwt  # type: ignore
-from werkzeug.exceptions import Unauthorized  # type: ignore
-
-from horao.auth import UnauthenticatedError
+import binascii
+from starlette.authentication import AuthenticationBackend, AuthenticationError, AuthCredentials, SimpleUser  # type: ignore
+from starlette.requests import Request, HTTPException  # type: ignore
+from starlette.responses import JSONResponse  # type: ignore
 
 
 basic_auth_structure = {
@@ -19,47 +18,27 @@ basic_auth_structure = {
     "sysadm": {"password": "secret", "role": "system.admin"},
 }
 
-JWT_ISSUER = "com.zalando.connexion"
-JWT_SECRET = "change_this"
-JWT_LIFETIME_SECONDS = 600
-JWT_ALGORITHM = "HS256"
 
-
-def login(username: str, password: str) -> str:
-    if os.getenv("ENVIRONMENT") != "production":
-        raise RuntimeError("Basic auth should not be used in production")
-    if username not in basic_auth_structure.keys():
-        raise Unauthorized(username)
-    if basic_auth_structure[username] != password:
-        raise Unauthorized(username)
-    return generate_token(username)
-
-
-def generate_token(user: str) -> str:
-    timestamp = _current_timestamp()
-    payload = {
-        "iss": JWT_ISSUER,
-        "iat": int(timestamp),
-        "exp": int(timestamp + JWT_LIFETIME_SECONDS),
-        "sub": str(user),
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-
-def decode_token(token: str) -> Dict[str, str]:
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    except JWTError as e:
-        raise Unauthorized from e
-
-
-def get_secret(user: str, token_info: str) -> str:
-    return """
-    You are user_id {user}, decoded token claims: {token_info}.
-    """.format(
-        user=user, token_info=token_info
-    )
-
-
-def _current_timestamp() -> int:
-    return int(time.time())
+class BasicAuthBackend(AuthenticationBackend):
+    async def authenticate(self, conn):
+        if os.getenv("ENVIRONMENT") == "production":
+            raise RuntimeError("Basic auth should not be used in production")
+        if "Authorization" not in conn.headers:
+            return
+        auth = conn.headers["Authorization"]
+        try:
+            scheme, credentials = auth.split()
+            if scheme.lower() != "basic":
+                return
+            decoded = base64.b64decode(credentials).decode("ascii")
+        except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
+            raise AuthenticationError(f"Invalid basic auth credentials ({exc})")
+        username, _, password = decoded.partition(":")
+        if (
+            username not in basic_auth_structure.keys()
+            or basic_auth_structure[username]["password"] != password
+        ):
+            raise HTTPException(
+                status_code=401, detail=f"access not allowed for {username}"
+            )
+        return AuthCredentials(["authenticated"]), SimpleUser(username)
