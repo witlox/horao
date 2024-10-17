@@ -30,6 +30,7 @@ class Port:
         number: int,
         mac: str,
         status: DeviceStatus,
+        connected: bool,
         speed_gb: int,
     ):
         self.serial_number = serial_number
@@ -38,6 +39,7 @@ class Port:
         self.number = number
         self.mac = mac
         self.status = status
+        self.connected = connected
         self.speed_gb = speed_gb
 
 

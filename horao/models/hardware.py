@@ -3,7 +3,7 @@
 
 This module contains the definition of compute/storage equipment (hardware) and their properties.
 We assume that 'faulty' equipment state is either up or down, it should be handled in a state machine, not here.
-Also we assume that these data structures are not very prone to change, given that this implies a manual activity.
+Also, we assume that these data structures are not very prone to change, given that this implies a manual activity.
 """
 from typing import List, Optional
 
@@ -112,6 +112,68 @@ class Server:
         self.status = status
 
 
+class Module:
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        cpu: List[CPU],
+        ram: List[RAM],
+        nic: List[NIC],
+        disk: Optional[List[Disk]],
+        accelerator: Optional[List[Accelerator]],
+        status: DeviceStatus,
+    ):
+        self.serial_number = serial_number
+        self.name = name
+        self.model = model
+        self.number = number
+        self.cpu = cpu
+        self.ram = ram
+        self.nic = nic
+        self.disk = disk
+        self.accelerator = accelerator
+        self.status = status
+
+
+class Node:
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        modules: List[Module],
+        status: DeviceStatus,
+    ):
+        self.serial_number = serial_number
+        self.name = name
+        self.model = model
+        self.number = number
+        self.modules = modules
+        self.status = status
+
+
+class Blade:
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        nodes: List[Node],
+        status: DeviceStatus,
+    ):
+        self.serial_number = serial_number
+        self.name = name
+        self.model = model
+        self.number = number
+        self.nodes = nodes
+        self.status = status
+
+
 class Chassis:
     def __init__(
         self,
@@ -119,13 +181,15 @@ class Chassis:
         name: str,
         model: str,
         number: int,
-        servers: List[Server],
+        servers: Optional[List[Server]],
+        blades: Optional[List[Blade]],
     ):
         self.serial_number = serial_number
         self.name = name
         self.model = model
         self.number = number
         self.servers = servers
+        self.blades = blades
 
 
 class Cabinet:
@@ -161,9 +225,8 @@ class DataCenter:
         self.number = number
         self.rows = rows
 
-    def move_server(
-        self, server: Server, from_cabinet: Cabinet, to_cabinet: Cabinet
-    ) -> None:
+    @staticmethod
+    def move_server(server: Server, from_cabinet: Cabinet, to_cabinet: Cabinet) -> None:
         """
         Move a server from one cabinet to another
         :param server: server to move
@@ -175,16 +238,46 @@ class DataCenter:
         to_cabinet.servers.append(server)
 
     @staticmethod
-    def move_blade(server: Server, from_chassis: Chassis, to_chassis: Chassis) -> None:
+    def move_chassis_server(
+        server: Server, from_chassis: Chassis, to_chassis: Chassis
+    ) -> None:
         """
-        Move a server from one chassis to another
-        :param server: server to move (usually a blade)
+        Move a server from one cabinet to another
+        :param server: server to move
         :param from_chassis: from
         :param to_chassis: to
         :return: None
+        :raises: ValueError if you try to remove a server that doesn't exist
+        :raises: IndexError if you try to move a server from or to a chassis that doesn't allow servers
         """
+        if not from_chassis.servers or not to_chassis.servers:
+            raise IndexError(
+                "Cannot move servers from a chassis that doesn't allow servers"
+            )
+        if not server in from_chassis.servers:
+            raise ValueError("Cannot move servers that are not installed.")
         from_chassis.servers.remove(server)
         to_chassis.servers.append(server)
+
+    @staticmethod
+    def move_blade(blade: Blade, from_chassis: Chassis, to_chassis: Chassis) -> None:
+        """
+        Move a server from one chassis to another
+        :param blade: blade to move
+        :param from_chassis: from
+        :param to_chassis: to
+        :return: None
+        :raises: ValueError if you try to remove a blade that is not installed
+        :raises: IndexError if you try to move a blade from or to a chassis that doesn't allow blades
+        """
+        if not from_chassis.blades or not to_chassis.blades:
+            raise IndexError(
+                "Cannot move blades from a chassis that doesn't allow blades"
+            )
+        if not blade in from_chassis.blades:
+            raise ValueError("Cannot move blades that are not installed.")
+        from_chassis.blades.remove(blade)
+        to_chassis.blades.append(blade)
 
     @staticmethod
     def swap_disk(

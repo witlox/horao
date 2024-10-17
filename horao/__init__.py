@@ -26,8 +26,6 @@ from starlette.middleware.cors import CORSMiddleware  # type: ignore
 from starlette.schemas import SchemaGenerator  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 
-from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware  # type: ignore
-
 from horao.auth.basic_auth import BasicAuthBackend
 
 schemas = SchemaGenerator(
@@ -74,7 +72,6 @@ def init_api() -> Starlette:
         routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
     middleware = [
         Middleware(CORSMiddleware, allow_origins=[cors]),
-        Middleware(OpenTelemetryMiddleware),
     ]
     if os.getenv("AUTH", "basic") == "basic":
         middleware.append(

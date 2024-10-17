@@ -3,8 +3,9 @@
 
 This module contains the definition of networking equipment (hardware) and their properties.
 We assume that 'faulty' equipment state is either up or down, it should be handled in the state machine, not here.
-Also we assume that these data structures are not very prone to change, given that this implies a manual activity.
+Also, we assume that these data structures are not very prone to change, given that this implies a manual activity.
 """
+import logging
 from enum import Enum, auto
 from typing import List, Optional
 
@@ -92,12 +93,12 @@ class SwitchType(Enum):
 
 
 class NetworkDevice:
-    def __init__(self, serial_number, name, model, number, lan_ports: List[Port]):
+    def __init__(self, serial_number, name, model, number, ports: List[Port]):
         self.serial_number = serial_number
         self.name = name
         self.model = model
         self.number = number
-        self.lan_ports = lan_ports
+        self.ports = ports
 
 
 class NIC(NetworkDevice):
@@ -194,31 +195,101 @@ class DataCenterNetwork:
         """
 
         def link_free_ports(lp: Port, rp: Port) -> None:
-            if not lp:
-                raise ValueError(
-                    f"No free ports available on {left.name} ({left.number}:{left.serial_number})"
-                )
-            # We assume that switches are connected via uplink ports, and that these ports are the same speed
-            if not rp:
-                raise ValueError(
-                    f"No free ports available on {right.name} ({right.number}:{right.serial_number})"
-                )
-            self.graph.add_edge(left, right, port=lp)
+            self.graph.add_edge(left, right)
+            lp.connected = True
+            rp.connected = True
             lp.status = DeviceStatus.Up
             rp.status = DeviceStatus.Up
 
         if isinstance(left, Switch) and left.uplink_ports and any(left.uplink_ports):
-            left_port = next(iter(left.uplink_ports), None)
+            left_port = next(
+                iter([l for l in left.uplink_ports if not l.connected]), None
+            )
         else:
-            left_port = next(iter(left.lan_ports), None)
-        right_port = next(
-            iter([p for p in right.lan_ports if p.status == DeviceStatus.Down]), None
-        )
-        if left_port and right_port:
-            link_free_ports(left_port, right_port)
+            left_port = next(iter([l for l in left.ports if not l.connected]), None)
+        if not left_port:
+            raise ValueError(
+                f"No free ports available on {left.name} ({left.number}:{left.serial_number})"
+            )
+        right_port = next(iter([r for r in right.ports if not r.connected]), None)
+        if not right_port:
+            raise ValueError(
+                f"No free ports available on {right.name} ({right.number}:{right.serial_number})"
+            )
+        link_free_ports(left_port, right_port)
 
     def unlink(self, left: NetworkDevice, right: NetworkDevice) -> None:
         self.graph.remove_edge(left, right)
+        if isinstance(left, Switch) and left.uplink_ports and any(left.uplink_ports):
+            left_port = next(iter([l for l in left.uplink_ports if l.connected]), None)
+        else:
+            left_port = next(iter([l for l in left.ports if l.connected]), None)
+        right_port = next(iter([r for r in right.ports if r.connected]), None)
+        if not left_port or not right_port:
+            raise ValueError(
+                f"could not determine connected ports for {left.name} and {right.name}"
+            )
+        left_port.connected = False
+        left_port.status = DeviceStatus.Down
+        right_port.connected = False
+        right_port.status = DeviceStatus.Down
+
+    def toggle(self, device: NetworkDevice) -> None:
+        n: NetworkDevice
+        for n in self.graph.neighbors(device):
+            if isinstance(n, Switch) and n.uplink_ports and any(n.uplink_ports):
+                left_port = next(iter([l for l in n.uplink_ports if l.connected]), None)
+            else:
+                left_port = next(iter([l for l in n.ports if l.connected]), None)
+            if left_port:
+                left_port.status = DeviceStatus.Down
+            else:
+                logging.warning(
+                    f"could not determine connected port for {n.name} to {device.name}"
+                )
+        for port in device.ports:
+            port.status = (
+                DeviceStatus.Down if port.status == DeviceStatus.Up else DeviceStatus.Up
+            )
+        if isinstance(device, Switch):
+            device.status = (
+                DeviceStatus.Down
+                if device.status == DeviceStatus.Up
+                else DeviceStatus.Up
+            )
+            if device.uplink_ports:
+                for port in device.uplink_ports:
+                    port.status = (
+                        DeviceStatus.Down
+                        if port.status == DeviceStatus.Up
+                        else DeviceStatus.Up
+                    )
+        elif isinstance(device, Router):
+            device.status = (
+                DeviceStatus.Down
+                if device.status == DeviceStatus.Up
+                else DeviceStatus.Up
+            )
+            if device.wan_ports:
+                for port in device.wan_ports:
+                    port.status = (
+                        DeviceStatus.Down
+                        if port.status == DeviceStatus.Up
+                        else DeviceStatus.Up
+                    )
+        elif isinstance(device, Firewall):
+            device.status = (
+                DeviceStatus.Down
+                if device.status == DeviceStatus.Up
+                else DeviceStatus.Up
+            )
+            if device.wan_ports:
+                for port in device.wan_ports:
+                    port.status = (
+                        DeviceStatus.Down
+                        if port.status == DeviceStatus.Up
+                        else DeviceStatus.Up
+                    )
 
     def get_topology(self) -> NetworkTopology:
         if nx.is_tree(self.graph):

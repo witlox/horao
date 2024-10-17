@@ -3,4 +3,3 @@ uvicorn
 networkx
 python-dotenv
 starlette
-opentelemetry-instrumentation-starlette
