@@ -9,7 +9,7 @@ Steps:
 4. Install the required packages (`poetry install`)
    - If you want to install the development dependencies as well, you can run `poetry install --with dev`
    - If you want to install with only testing dependencies, you can run `poetry install --with test`
-5. Run the project (`python horao/main.py`)
+5. Run the project (`horao`)
 
 ## Note on testing
 
