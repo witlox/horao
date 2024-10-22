@@ -1,8 +1,5 @@
-from decimal import Decimal
 from itertools import permutations
 from uuid import uuid4
-
-import packify
 
 from horao.crdts import Update
 from horao.crdts.array import FractionallyIndexedArray

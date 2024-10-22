@@ -1,5 +1,3 @@
-import packify
-
 from horao.crdts import Update
 from horao.crdts.clock import ScalarClock, StringClock
 from horao.crdts.data_types import (
@@ -12,7 +10,6 @@ from horao.crdts.data_types import (
     ReplicatedGrowableArrayItem,
     String,
 )
-from horao.crdts.protocols import CRDT
 from horao.crdts.register import LastWriterWinsRegister, MultiValueRegister
 
 inject = {

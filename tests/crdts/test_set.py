@@ -1,7 +1,5 @@
 from itertools import permutations
 
-import packify
-
 from horao.crdts import Update
 from horao.crdts.clock import ScalarClock, StringClock
 from horao.crdts.data_types import (

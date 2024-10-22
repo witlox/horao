@@ -1,5 +1,4 @@
 from dataclasses import is_dataclass
-from decimal import Decimal
 
 from horao.crdts import Update
 from horao.crdts.clock import ScalarClock

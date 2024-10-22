@@ -131,7 +131,6 @@ def test_int_comparisons():
     assert dw0 <= dw1
 
 
-# RGAItemWrapper tests
 def test_rga_item_implements_data_protocol():
     rgatw = ReplicatedGrowableArrayItem(Bytes(b"123"), Integer(1), 1)
     assert isinstance(rgatw, Data)
