@@ -11,9 +11,8 @@ from typing import List, Optional
 
 import networkx as nx  # type: ignore
 
-
+from horao.models.osi_layers import LinkLayer, Port
 from horao.models.status import DeviceStatus
-from horao.models.osi_layers import Port, LinkLayer
 
 
 class NetworkTopology(Enum):
@@ -191,7 +190,7 @@ class DataCenterNetwork:
         :param left: device (if uplink ports exist, they are used to connect to other devices)
         :param right: device (lan ports are used to connect to other devices)
         :return: None
-        :raises: ValueError if no free ports are available on either device.
+        :raises ValueError: if no free ports are available on either device.
         """
 
         def link_free_ports(lp: Port, rp: Port) -> None:

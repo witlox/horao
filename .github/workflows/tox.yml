@@ -1,4 +1,4 @@
-name: tox
+name: poetry
 
 on:
   - push
@@ -8,8 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
+        poetry-version: ["1.8.4"]
 
     steps:
       - uses: actions/checkout@v3
@@ -17,9 +19,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install tox tox-gh-actions
-      - name: Test with tox
-        run: tox
+      - name: Run image
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+      - name: Run tests
+        run: poetry run pytest
+      - name: Run coverage
+        run: poetry run coverage run -m pytest

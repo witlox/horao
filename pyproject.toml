@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "horao"
+version = "2024.1.1"
+description = "HORAO - management engine for hybrid multi-cloud environments"
+readme = "README.md"
+authors = ["Pim Witlox <pim@witlox.io>"]
+license = "LICENSE"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uvicorn = "^0.32.0"
+packify = "^0.2.2"
+networkx = "^3.4.2"
+python-dotenv = "^1.0.1"
+starlette = "^0.41.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+flake8 = "^7.1.1"
+isort = "^5.13.2"
+mypy = "^1.12.1"
+pylint = "^3.3.1"
+pre-commit = "^4.0.1"
+
+[tool.isort]
+profile = "black"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.3"
+pytest-cov = "^5.0.0"
+httpx = "^0.27.2"
+testcontainers = "^4.8.2"
+
+[tool.poetry.group.test]
+optional = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

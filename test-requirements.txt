@@ -1,7 +1,0 @@
-tox
-black
-mypy
-pytest
-pytest-cov
-httpx
-testcontainers[redis]

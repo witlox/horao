@@ -1,5 +1,0 @@
-setuptools
-uvicorn
-networkx
-python-dotenv
-starlette
