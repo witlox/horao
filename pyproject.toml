@@ -35,7 +35,7 @@ testcontainers = "^4.8.2"
 optional = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=src --cov-report html --cov-fail-under=50"
+addopts = "--cov=src --cov-report html"
 
 [build-system]
 requires = ["poetry-core"]

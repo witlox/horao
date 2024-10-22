@@ -3,7 +3,7 @@ from __future__ import annotations
 from hashlib import sha256
 from typing import Type
 
-from horao.crdts import CRDT, Update
+from horao.crdts.protocols import CRDT, Update
 
 
 def get_merkle_tree(
