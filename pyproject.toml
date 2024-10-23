@@ -17,6 +17,9 @@ opentelemetry-sdk = "^1.27.0"
 starlette = "^0.41.0"
 redis = "^5.1.1"
 
+[tool.poetry.scripts]
+horao = 'horao.__main__:main'
+
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
 flake8 = "^7.1.1"
@@ -24,6 +27,9 @@ isort = "^5.13.2"
 mypy = "^1.12.1"
 pylint = "^3.3.1"
 pre-commit = "^4.0.1"
+
+[tool.poetry.group.dev]
+optional = true
 
 [tool.isort]
 profile = "black"
