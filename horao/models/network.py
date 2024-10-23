@@ -5,12 +5,16 @@ This module contains the definition of networking equipment (hardware) and their
 We assume that 'faulty' equipment state is either up or down, it should be handled in the state machine, not here.
 Also, we assume that these data structures are not very prone to change, given that this implies a manual activity.
 """
+from __future__ import annotations
+
 import logging
 from enum import Enum, auto
 from typing import List, Optional
 
 import networkx as nx  # type: ignore
+from packify import pack, unpack
 
+from horao.models.components import Hardware
 from horao.models.osi_layers import LinkLayer, Port
 from horao.models.status import DeviceStatus
 
@@ -91,12 +95,9 @@ class SwitchType(Enum):
     Core = auto()
 
 
-class NetworkDevice:
+class NetworkDevice(Hardware):
     def __init__(self, serial_number, name, model, number, ports: List[Port]):
-        self.serial_number = serial_number
-        self.name = name
-        self.model = model
-        self.number = number
+        super().__init__(serial_number, name, model, number)
         self.ports = ports
 
 
@@ -105,6 +106,15 @@ class NIC(NetworkDevice):
         self, serial_number: str, name: str, model: str, number: int, ports: List[Port]
     ):
         super().__init__(serial_number, name, model, number, ports)
+
+    def pack(self) -> bytes:
+        return pack([self.name, self.model, self.number, self.ports])
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> NIC:
+        inject = {**globals()} if not inject else {**globals(), **inject}
+        name, model, number, ports = unpack(*data, inject=inject)
+        return cls(name, model, number, ports)
 
 
 class Firewall(NetworkDevice):

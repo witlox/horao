@@ -33,8 +33,7 @@ class Update:
         :return: None
         :raises ValueError: data of wrong length
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         if len(data) < 12:
             raise ValueError("data must be at least 12 long")
         u, t, d = unpack(data, inject=inject)

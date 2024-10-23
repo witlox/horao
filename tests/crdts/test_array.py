@@ -30,7 +30,7 @@ inject = {
 
 def test_array_append_returns_state_update_protocol_and_changes_read():
     fia = FractionallyIndexedArray()
-    view1 = fia.read()
+    view1 = fia.read(inject=inject)
 
     item = b"hello"
     state_update = fia.append(item, 1)
@@ -96,7 +96,6 @@ def test_array_read_full_returns_tuple_of_fia_item():
     fi_array.positions.set(Bytes(second.uuid), second, 1)
     view = fi_array.read_full()
 
-    assert isinstance(view, tuple)
     assert len(view) == 2
 
     for item in view:

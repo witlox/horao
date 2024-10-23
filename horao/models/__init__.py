@@ -3,8 +3,8 @@
 
 This module contains the classes that are used to model the hardware and software resources of the system.
 """
-from horao.models.status import DeviceStatus
-from horao.models.osi_layers import (
+from .status import DeviceStatus
+from .osi_layers import (
     LinkLayer,
     Protocol,
     Port,
@@ -12,7 +12,7 @@ from horao.models.osi_layers import (
     IpAddress,
     Route,
 )
-from horao.models.network import (
+from .network import (
     Router,
     RouterType,
     Switch,
@@ -21,15 +21,12 @@ from horao.models.network import (
     DataCenterNetwork,
     NetworkType,
     NetworkTopology,
-)
-from horao.models.hardware import (
-    RAM,
     NIC,
+)
+from .components import (
+    RAM,
     CPU,
     Disk,
-    Server,
-    Chassis,
-    Row,
-    Cabinet,
-    DataCenter,
 )
+from .dc import DataCenter, Cabinet
+from .composite import Server, Chassis

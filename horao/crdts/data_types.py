@@ -122,11 +122,8 @@ class ComplexType:
 
     @classmethod
     def unpack(cls, data: bytes, /, *, inject: dict = None) -> ComplexType:
-        value, uuid, parent_uuid, visible = (
-            unpack(data, inject={**globals(), **inject})
-            if inject
-            else unpack(data, inject={**globals()})
-        )
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        value, uuid, parent_uuid, visible = unpack(data, inject=inject)
         return cls(
             value=value, uuid=uuid, parent_uuid=parent_uuid, visible=bool(visible)
         )
@@ -215,11 +212,8 @@ class FractionallyIndexedArrayItem:
     def unpack(
         cls, data: bytes, /, *, inject: dict = None
     ) -> FractionallyIndexedArrayItem:
-        value, index, uuid = (
-            unpack(data, inject={**globals(), **inject})
-            if inject
-            else unpack(data, inject={**globals()})
-        )
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        value, index, uuid = unpack(data, inject=inject)
         return cls(
             value=value,
             index=index,
@@ -273,11 +267,8 @@ class ReplicatedGrowableArrayItem(String):
         :param inject: optional data to inject during unpacking
         :return: ReplicatedGrowableArrayItem instance
         """
-        v, t, w = (
-            unpack(data, inject={**globals(), **inject})
-            if inject
-            else unpack(data, inject={**globals()})
-        )
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        v, t, w = unpack(data, inject=inject)
         return cls(value=v, time_stamp=t, writer=w)
 
     def __repr__(self) -> str:

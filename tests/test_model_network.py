@@ -8,7 +8,6 @@ from horao.models import (
     DeviceStatus,
     LinkLayer,
     Port,
-    Row,
     Server,
     Switch,
 )
@@ -115,27 +114,18 @@ def basic_networking_configuration():
         [],
         DeviceStatus.Up,
     )
-    dc = DataCenter(
-        "dc",
-        1,
-        [
-            Row(
-                "row",
-                1,
-                [
-                    Cabinet(
-                        "cab",
-                        "cab",
-                        "cab",
-                        1,
-                        [server],
-                        [],
-                        [core, leaf_left, leaf_right],
-                    )
-                ],
-            )
-        ],
-    )
+    dc = DataCenter("dc", 1)
+    dc[1] = [
+        Cabinet(
+            "cab",
+            "cab",
+            "cab",
+            1,
+            [server],
+            [],
+            [core, leaf_left, leaf_right],
+        )
+    ]
     return dc, dcn, core, leaf_left, leaf_right, server
 
 

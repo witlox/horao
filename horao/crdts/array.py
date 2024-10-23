@@ -65,8 +65,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: FractionallyIndexedArray
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         positions = LastWriterWinsMap.unpack(data, inject)
         return cls(positions=positions, clock=positions.clock)
 
@@ -76,8 +75,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: tuple[Any]
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         if not self.cache:
             if not self.store:
                 self.calculate(inject=inject)
@@ -188,8 +186,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: Update
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         fia_item = FractionallyIndexedArrayItem(
             value=item, index=index, uuid=uuid4().bytes
         )
@@ -226,8 +223,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: Update
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         first_index = first.index.value
         second_index = second.index.value
         index = self.index_between(first_index, second_index)
@@ -351,8 +347,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: Update
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         if len(self.read_full(inject=inject)) > 0:
             last = self.read_full(inject=inject)[-1]
             last_index = last.index.value
@@ -444,8 +439,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: tuple[Update]
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         index_space = max_index / Float(len(self.read()) + 1)
         updates = []
         items = self.read_full()
@@ -479,9 +473,8 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: tuple[Update]
         """
-        if inject is None:
-            inject = {}
-        max_index = Float(1e-20) * (1 + len(self.read()))
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        max_index = Float(0.00000000000000000001) * (1 + len(self.read()))
         return self.normalize(
             writer, max_index, update_class=update_class, inject=inject
         )
@@ -540,8 +533,8 @@ class FractionallyIndexedArray:
         :return: Update
         """
         full = self.read_full()
-        last_index = full[-1].index.value if len(full) > 0 else Decimal(0)
-        index = last_index + Float(1e-20)
+        last_index = full[-1].index.value if len(full) > 0 else 0.0
+        index = last_index + Float(0.00000000000000000001)
         return self.put(item, writer, index, update_class=update_class)
 
     def remove(
@@ -586,8 +579,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: Update
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         state_update = update_class(
             clock_uuid=self.clock.uuid,
             time_stamp=self.clock.read(),
@@ -603,8 +595,7 @@ class FractionallyIndexedArray:
         :param inject: optional data to inject during unpacking
         :return: None
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         positions = self.positions.read(inject={**globals(), **inject})
         items: list[FractionallyIndexedArrayItem] = [v for k, v in positions.items()]
         items.sort(key=lambda item: (item.index.value, pack(item.value)))

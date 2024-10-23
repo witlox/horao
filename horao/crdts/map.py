@@ -380,7 +380,7 @@ class LastWriterWinsMap:
         inject = {**globals(), **inject} if inject is not None else {**globals()}
 
         result = {}
-        for name in self.names.read():
+        for name in self.names.read(inject=inject):
             result[name] = self.registers[name].read(inject=inject)
 
         return result

@@ -5,7 +5,11 @@ This module contains the definition of networking activities and their propertie
 We assume that these data structures are prone to change, given that these are configuration artifacts.
 OSI: https://en.wikipedia.org/wiki/OSI_model
 """
+from __future__ import annotations
 from enum import Enum, auto
+
+from msgpack import unpack
+from packify import pack
 
 from horao.models.status import DeviceStatus
 
@@ -41,6 +45,37 @@ class Port:
         self.status = status
         self.connected = connected
         self.speed_gb = speed_gb
+
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.mac,
+                1 if self.status == DeviceStatus.Up else 0,
+                1 if self.connected else 0,
+                self.speed_gb,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Port:
+        inject = {**globals()} if not inject else {**globals(), **inject}
+        serial, name, model, number, mac, status, connected, speed_gb = unpack(
+            data, inject=inject
+        )
+        return cls(
+            serial_number=serial,
+            name=name,
+            model=model,
+            number=number,
+            mac=mac,
+            status=DeviceStatus.Down if status == 0 else DeviceStatus.Up,
+            connected=connected == 1,
+            speed_gb=speed_gb,
+        )
 
 
 class IpAddress:

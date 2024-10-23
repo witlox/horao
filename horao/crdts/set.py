@@ -50,10 +50,9 @@ class ObservedRemovedSet(CRDT):
         :param inject: optional data to inject during unpacking
         :return: ObservedRemovedSet
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         observed, observed_metadata, removed, removed_metadata, clock = unpack(
-            data, inject={**globals(), **inject}
+            data, inject=inject
         )
         return cls(observed, observed_metadata, removed, removed_metadata, clock)
 
@@ -63,8 +62,7 @@ class ObservedRemovedSet(CRDT):
         :param inject: dict of optional data to inject during unpacking
         :return: set[SerializableType]
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         if self.cache is not None:
             if self.cache[0] == self.clock.read():
                 return self.cache[1]
@@ -82,8 +80,7 @@ class ObservedRemovedSet(CRDT):
         :return: ObservedRemovedSet
         :raises ValueError: state_update invalid
         """
-        if inject is None:
-            inject = {}
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         if state_update.clock_uuid != self.clock.uuid:
             raise ValueError("state_update.clock_uuid must equal CRDT.clock.uuid")
         if len(state_update.data) != 2:

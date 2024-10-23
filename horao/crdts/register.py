@@ -358,7 +358,7 @@ class LastWriterWinsRegister:
 
     def checksums(
         self, /, *, from_time_stamp: Any = None, until_time_stamp: Any = None
-    ) -> tuple[int]:
+    ) -> tuple[int, int, int]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: start time_stamp
