@@ -80,7 +80,7 @@ def test_array_read_returns_tuple_of_underlying_items():
     assert view == ("first", b"second")
 
 
-def test_array_read_full_returns_tuple_of_FIAItemWrapper():
+def test_array_read_full_returns_tuple_of_fia_item():
     fi_array = FractionallyIndexedArray()
     first = FractionallyIndexedArrayItem(
         value="first",

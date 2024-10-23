@@ -84,7 +84,7 @@ class FractionallyIndexedArray:
             self.cache = [item.value for item in self.store]
         return tuple(self.cache)
 
-    def read_full(self, /, *, inject=None) -> tuple[FractionallyIndexedArrayItem]:
+    def read_full(self, /, *, inject=None) -> [FractionallyIndexedArrayItem]:
         """
         Return the full, eventually consistent list of items without tombstones but with complete
         FractionallyIndexedArrayItem rather than the underlying SerializableType values. Use the
@@ -97,7 +97,7 @@ class FractionallyIndexedArray:
         inject = {**globals(), **inject} if inject is not None else {**globals()}
         if not self.store:
             self.calculate(inject=inject)
-        return tuple(self.store)
+        return self.store
 
     def update(
         self, state_update: Update, /, *, inject=None
@@ -109,26 +109,7 @@ class FractionallyIndexedArray:
         :return: self
         :raises TypeError or ValueError for invalid state_update.
         """
-        if inject is None:
-            inject = {}
-        if state_update.clock_uuid != self.clock.uuid:
-            raise ValueError("state_update.clock_uuid must equal CRDT.clock.uuid")
-        if type(state_update.data) is not tuple:
-            raise TypeError("state_update.data must be tuple")
-        if state_update.data[0] not in ("o", "r"):
-            raise ValueError("state_update.data[0] must be in ('o', 'r')")
-        if not isinstance(state_update.data[1], SerializableType):
-            raise TypeError(
-                f"state_update.data[1] must be SerializableType ({SerializableType})"
-            )
-        if not isinstance(state_update.data[2], SerializableType):
-            raise TypeError(f"state_update.data[2] must be writer {SerializableType}")
-        if not (
-            isinstance(state_update.data[3], FractionallyIndexedArrayItem)
-            or state_update.data[3] is None
-        ):
-            raise TypeError("state_update.data[3] must be FIAItemWrapper|None")
-
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         self.invoke_listeners(state_update)
         self.positions.update(state_update)
         self.update_cache(
@@ -417,7 +398,7 @@ class FractionallyIndexedArray:
             elif before:
                 before_index = self.store.index(before)
                 if before_index == 0:
-                    new_index = self.index_between(Float("0"), before.index.value)
+                    new_index = self.index_between(Float(0), before.index.value)
                 else:
                     after = self.store[before_index - 1]
                     new_index = self.index_between(
@@ -426,7 +407,7 @@ class FractionallyIndexedArray:
             elif after:
                 after_index = self.store.index(after)
                 if after_index == len(self.store) - 1:
-                    new_index = self.index_between(after.index.value, Float("1"))
+                    new_index = self.index_between(after.index.value, Float(1))
                 else:
                     before = self.store[after_index + 1]
                     new_index = self.index_between(
@@ -448,7 +429,7 @@ class FractionallyIndexedArray:
     def normalize(
         self,
         writer: SerializableType,
-        max_index: Float = Float("1.0"),
+        max_index: Float = Float(1.0),
         /,
         *,
         update_class: Type[Update] = Update,
@@ -500,7 +481,7 @@ class FractionallyIndexedArray:
         """
         if inject is None:
             inject = {}
-        max_index = Float("1E-20") * (1 + len(self.read()))
+        max_index = Float(1e-20) * (1 + len(self.read()))
         return self.normalize(
             writer, max_index, update_class=update_class, inject=inject
         )
@@ -560,7 +541,7 @@ class FractionallyIndexedArray:
         """
         full = self.read_full()
         last_index = full[-1].index.value if len(full) > 0 else Decimal(0)
-        index = last_index + Decimal("1E-20")
+        index = last_index + Float(1e-20)
         return self.put(item, writer, index, update_class=update_class)
 
     def remove(
@@ -650,9 +631,7 @@ class FractionallyIndexedArray:
         :return: None
         :raises TypeError: invalid item or visible
         """
-        if inject is None:
-            inject = {}
-
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
         positions = self.positions.read(inject={**globals(), **inject})
 
         if self.store is None:
@@ -666,8 +645,6 @@ class FractionallyIndexedArray:
             pass
 
         if visible and Bytes(item.uuid) in positions:
-            # find correct insertion index
-            # sort by (index, serialized value)
             index = bisect(
                 self.store,
                 (item.index.value, pack(item.value)),

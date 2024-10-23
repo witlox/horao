@@ -12,6 +12,8 @@ uvicorn = "^0.32.0"
 packify = "^0.2.2"
 networkx = "^3.4.2"
 python-dotenv = "^1.0.1"
+opentelemetry-api = "^1.27.0"
+opentelemetry-sdk = "^1.27.0"
 starlette = "^0.41.0"
 redis = "^5.1.1"
 
