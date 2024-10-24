@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from binascii import crc32
 from dataclasses import dataclass, field
 from typing import (
@@ -7,10 +8,15 @@ from typing import (
     Any,
     Hashable,
     Optional,
+    TypeVar,
+    Generic,
+    List,
+    Iterable,
 )
 
 from packify import SerializableType, pack, unpack
 
+from horao.models.decorators import instrument_class_function
 from horao.models.internal import (
     ScalarClock,
     Update,
@@ -1039,3 +1045,200 @@ class LastWriterWinsRegister(CRDT):
         """
         for listener in self.listeners:
             listener(state_update)
+
+
+T = TypeVar("T", bound=CRDT)
+
+
+class CRDTList(Generic[T]):
+    """CRDTList behaves as a list of instances T that can be updated concurrently."""
+
+    def __init__(
+        self,
+        content: List[T] = None,
+        items: LastWriterWinsMap = None,
+        inject=None,
+    ) -> None:
+        """
+        Initialize from an LastWriterWinsMap of item positions and a shared clock if supplied otherwise default.
+        :param content: list of T instances
+        :param items: LastWriterWinsMap of T items
+        :param inject: optional data to inject during unpacking
+        """
+        self.inject = {**globals()} if not inject else {**globals(), **inject}
+        self.log = logging.getLogger(__name__)
+        self.hardware = LastWriterWinsMap() if not items else items
+        if content:
+            self.extend(content)
+        self.iterator = 0
+
+    @instrument_class_function(name="append", level=logging.DEBUG)
+    def append(self, item: T) -> T:
+        """
+        Append a hardware instance to the list
+        :param item: instance of Hardware
+        :return: inserted item
+        """
+        self.hardware.set(len(self), item, hash(item))
+        return item
+
+    def clear(self) -> None:
+        """
+        Clear the list, not the history
+        :return: None
+        """
+        # todo check history is consistent
+        self.iterator = 0
+        self.hardware = LastWriterWinsMap()
+
+    def copy(self) -> CRDTList[T]:
+        results = CRDTList(inject=self.inject)
+        results.extend(iter(self))
+        return results
+
+    def count(self):
+        return len(self)
+
+    def extend(self, other: Iterable[T]) -> CRDTList[T]:
+        for item in other:
+            self.hardware.set(len(self), item, hash(item))
+        return self
+
+    def index(self, item: T) -> int:
+        """
+        Return the index of the hardware instance
+        :param item: instance to search for
+        :return: int
+        :raises ValueError: item not found
+        """
+        result = next(
+            iter([i for i, h in self.hardware.read(inject=self.inject) if h == item]),
+            None,
+        )
+        if result is None:
+            self.log.error(f"{item.name} not found.")
+            raise ValueError(f"{item} not found.")
+        return result
+
+    def insert(self, index: int, item: T) -> None:
+        self.hardware.set(index, item, hash(item))
+
+    @instrument_class_function(name="pop", level=logging.DEBUG)
+    def pop(self, index: int, default: T = None) -> Optional[T]:
+        if index >= len(self):
+            self.log.debug(f"Index {index} out of bounds, returning default.")
+            return default
+        item = self.hardware.read(inject=self.inject)[index]
+        self.hardware.unset(item, hash(item))
+        return item
+
+    @instrument_class_function(name="remove", level=logging.DEBUG)
+    def remove(self, item: T) -> None:
+        """
+        Remove a hardware instance from the list
+        :param item: instance of Hardware
+        :return: None
+        :raises ValueError: item not found
+        """
+        local_item = next(
+            iter([h for _, h in self.hardware.read(inject=self.inject) if h == item]),
+            None,
+        )
+        if not local_item:
+            self.log.debug(f"{item.name} not found.")
+            raise ValueError(f"{item} not found.")
+        self.hardware.unset(local_item, hash(item))
+
+    def reverse(self) -> None:
+        """
+        cannot reverse a list inplace in a CRDT
+        :return: None
+        :raises: NotImplementedError
+        """
+        raise NotImplementedError("Cannot reverse a list inplace in a CRDT")
+
+    def sort(self, item: T = None, reverse: bool = False) -> None:
+        """
+        cannot sort a list inplace in a CRDT
+        :return: None
+        :raises: NotImplementedError
+        """
+        raise NotImplementedError("Cannot sort a list inplace in a CRDT")
+
+    def __len__(self) -> int:
+        return len(self.hardware.read(inject=self.inject))
+
+    def __eq__(self, other: CRDTList[T]) -> bool:
+        return self.hardware.read(inject=self.inject) == other.hardware.read(
+            inject=self.inject
+        )
+
+    def __ne__(self, other: CRDTList[T]) -> bool:
+        return self.hardware.read(inject=self.inject) != other.hardware.read(
+            inject=self.inject
+        )
+
+    def __contains__(self, item: T) -> bool:
+        return item in self.hardware.read(inject=self.inject)
+
+    def __delitem__(self, item: T) -> None:
+        if item not in self.hardware.read(inject=self.inject):
+            raise KeyError(f"{item} not found.")
+        self.remove(item)
+
+    def __getitem__(self, index: int) -> T:
+        return self.hardware.read(inject=self.inject)[index]
+
+    def __setitem__(self, index: int, value: T) -> None:
+        self.hardware.set(index, value, hash(value))
+
+    def __iter__(self) -> Iterable[T]:
+        for _, item in self.hardware.read(inject=self.inject):
+            yield item
+
+    def __next__(self) -> T:
+        if self.iterator >= len(self):
+            self.iterator = 0
+            raise StopIteration
+        item = self.hardware.read(inject=self.inject)[self.iterator]
+        self.iterator += 1
+        return item
+
+    def __add__(self, other: CRDTList[T]) -> CRDTList[T]:
+        return self.extend(iter(other))
+
+    def __sub__(self, other: CRDTList[T]) -> CRDTList[T]:
+        for item in iter(other):
+            self.remove(item)
+        return self
+
+    def __repr__(self) -> str:
+        return f"HardwareList({self.hardware.read(inject=self.inject)})"
+
+    def __reversed__(self) -> CRDTList[T]:
+        return self.hardware.read(inject=self.inject)[::-1]
+
+    def __sizeof__(self) -> int:
+        return self.count()
+
+    def __hash__(self):
+        return hash(self.hardware)
+
+    def pack(self) -> bytes:
+        """
+        Pack the data and metadata into a bytes string.
+        :return: bytes
+        """
+        return self.hardware.pack()
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject=None) -> CRDTList[T]:
+        """
+        Unpack the data bytes string into an instance.
+        :param data: serialized FractionallyIndexedArray needing unpacking
+        :param inject: optional data to inject during unpacking
+        :return: FractionallyIndexedArray
+        """
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        positions = LastWriterWinsMap.unpack(data, inject)
+        return cls(items=positions, inject=inject)

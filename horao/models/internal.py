@@ -3,7 +3,16 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass, field
 from hashlib import sha256
-from typing import Hashable, Type, runtime_checkable, Protocol, Any, Callable
+from typing import (
+    Hashable,
+    Type,
+    runtime_checkable,
+    Protocol,
+    Any,
+    Callable,
+    TypeVar,
+    Generic,
+)
 from uuid import uuid4
 
 from packify import SerializableType, pack, unpack

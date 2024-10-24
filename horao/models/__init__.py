@@ -18,7 +18,6 @@ from .network import (
     Switch,
     SwitchType,
     Firewall,
-    DataCenterNetwork,
     NetworkType,
     NetworkTopology,
     NIC,
@@ -28,5 +27,5 @@ from .components import (
     CPU,
     Disk,
 )
-from .dc import DataCenter, Cabinet
+from .dc import DataCenter, Cabinet, DataCenterNetwork
 from .composite import Server, Chassis
