@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Dict, Tuple, Iterable
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import networkx as nx
 from packify import pack, unpack
 
-from . import NetworkType, Port, DeviceStatus, Switch, Router, Firewall, NetworkTopology
-from .crdt import LastWriterWinsMap
-from .composite import Server, Chassis, Disk, NIC, ComputerList, Computer
-from .network import Switch, NetworkDevice, NetworkList
+from . import DeviceStatus, Firewall, NetworkTopology, NetworkType, Port, Router
 from .components import Hardware, HardwareList
-from .composite import Blade
+from .composite import NIC, Blade, Chassis, ComputerList, Disk, Server
+from .crdt import LastWriterWinsMap
 from .decorators import instrument_class_function
+from .network import NetworkDevice, NetworkList, Switch
 
 
 class Cabinet(Hardware):
@@ -76,34 +75,34 @@ class DataCenter:
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:
         result = {}
-        for key, v in self._rows.read():
+        for key, v in self.rows.read():
             result[key] = v.value
         return result
 
     @instrument_class_function(name="has_key", level=logging.DEBUG)
     def has_key(self, k: int) -> bool:
-        for key, _ in self._rows.read():
+        for key, _ in self.rows.read():
             if key == k:
                 return True
         return False
 
     def update(self, key: int, value: List[Cabinet]) -> None:
-        self._rows.set(key, value, key)
+        self.rows.set(key, value, key)
 
     def keys(self) -> List[int]:
-        return [k for k, _ in self._rows.read()]
+        return [k for k, _ in self.rows.read()]
 
     def values(self) -> List[List[Cabinet]]:
-        return [v for _, v in self._rows.read()]
+        return [v for _, v in self.rows.read()]
 
     def items(self) -> List[Tuple[int, List[Cabinet]]]:
-        return [(k, v) for k, v in self._rows.read()]
+        return [(k, v) for k, v in self.rows.read()]
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
     def pop(self, key: int) -> List[Cabinet]:
-        for k, v in self._rows.read():
+        for k, v in self.rows.read():
             if k == key:
-                self._rows.unset(key, key)
+                self.rows.unset(key, key)
                 return v.value
         raise KeyError(f"Key {key} not found")
 
@@ -114,20 +113,20 @@ class DataCenter:
         return not self == other
 
     def __setitem__(self, key: int, item: List[Cabinet]) -> None:
-        self._rows.set(key, item, key)
+        self.rows.set(key, item, key)
 
     @instrument_class_function(name="getitem", level=logging.DEBUG)
     def __getitem__(self, key):
-        for k, v in self._rows.read():
+        for k, v in self.rows.read():
             if k == key:
                 return v.value
         raise KeyError(f"Key {key} not found")
 
     @instrument_class_function(name="delitem", level=logging.DEBUG)
     def __delitem__(self, key):
-        for k, v in self._rows.read():
+        for k, v in self.rows.read():
             if k == key:
-                self._rows.unset(key, key)
+                self.rows.unset(key, key)
                 return
         raise KeyError(f"Key {key} not found")
 
@@ -135,10 +134,10 @@ class DataCenter:
         return f"DataCenter({self.name}, {self.number})"
 
     def __len__(self) -> int:
-        return len(self._rows.read())
+        return len(self.rows.read())
 
     def __contains__(self, cabinet: Cabinet) -> bool:
-        for _, v in self._rows.read():
+        for _, v in self.rows.read():
             if cabinet in v:
                 return True
         return False
@@ -176,12 +175,7 @@ class DataCenter:
         :param to_chassis: to
         :return: None
         :raises: ValueError if you try to remove a server that doesn't exist
-        :raises: IndexError if you try to move a server from or to a chassis that doesn't allow servers
         """
-        if not from_chassis.servers or not to_chassis.servers:
-            raise IndexError(
-                "Cannot move servers from a chassis that doesn't allow servers"
-            )
         if not server in from_chassis.servers:
             raise ValueError("Cannot move servers that are not installed.")
         from_chassis.servers.remove(server)
@@ -196,12 +190,7 @@ class DataCenter:
         :param to_chassis: to
         :return: None
         :raises: ValueError if you try to remove a blade that is not installed
-        :raises: IndexError if you try to move a blade from or to a chassis that doesn't allow blades
         """
-        if not from_chassis.blades or not to_chassis.blades:
-            raise IndexError(
-                "Cannot move blades from a chassis that doesn't allow blades"
-            )
         if not blade in from_chassis.blades:
             raise ValueError("Cannot move blades that are not installed.")
         from_chassis.blades.remove(blade)

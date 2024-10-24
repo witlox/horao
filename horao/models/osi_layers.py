@@ -6,11 +6,13 @@ We assume that these data structures are prone to change, given that these are c
 OSI: https://en.wikipedia.org/wiki/OSI_model
 """
 from __future__ import annotations
+
 from enum import Enum, auto
 
 from msgpack import unpack
 from packify import pack
 
+from horao.models.components import Hardware
 from horao.models.status import DeviceStatus
 
 
@@ -25,7 +27,7 @@ class Protocol(Enum):
     ICMP = auto()
 
 
-class Port:
+class Port(Hardware):
     def __init__(
         self,
         serial_number: str,
@@ -37,10 +39,7 @@ class Port:
         connected: bool,
         speed_gb: int,
     ):
-        self.serial_number = serial_number
-        self.name = name
-        self.model = model
-        self.number = number
+        super().__init__(serial_number, name, model, number)
         self.mac = mac
         self.status = status
         self.connected = connected

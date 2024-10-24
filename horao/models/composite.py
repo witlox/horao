@@ -7,8 +7,8 @@ from typing import List, Optional, TypeVar
 
 from packify import pack, unpack
 
-from horao.models.components import Accelerator, Hardware, CPU, RAM, Disk, HardwareList
-from horao.models.crdt import LastWriterWinsMap, CRDTList
+from horao.models.components import CPU, RAM, Accelerator, Disk, Hardware, HardwareList
+from horao.models.crdt import CRDTList, LastWriterWinsMap
 from horao.models.network import NIC, DeviceStatus
 
 
@@ -153,7 +153,7 @@ class Server(Computer):
         )
 
 
-class Module(Computer):
+class Module(Server):
     """A module is a compute component that can be added to a node"""
 
     def __init__(
@@ -170,30 +170,6 @@ class Module(Computer):
         status: DeviceStatus,
     ):
         super().__init__(
-            serial_number, name, model, number, cpus, rams, nics, disks, accelerators
-        )
-        self.status = status
-
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                self.cpus,
-                self.rams,
-                self.nics,
-                self.disks,
-                self.accelerators,
-                1 if self.status == DeviceStatus.Up else 0,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Module:
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        (
             serial_number,
             name,
             model,
@@ -204,23 +180,11 @@ class Module(Computer):
             disks,
             accelerators,
             status,
-        ) = unpack(data, inject=inject)
-        return cls(
-            serial_number,
-            name,
-            model,
-            number,
-            cpus,
-            rams,
-            nics,
-            disks,
-            accelerators,
-            DeviceStatus.Up if status == 1 else DeviceStatus.Down,
         )
 
 
-class Node(Computer):
-    """A node is a physical server that can host multiple modules"""
+class Node(Hardware):
+    """A node is a physical container that can host multiple modules"""
 
     def __init__(
         self,
@@ -263,8 +227,8 @@ class Node(Computer):
         )
 
 
-class Blade(Computer):
-    """A blade is a physical server that can host multiple nodes"""
+class Blade(Hardware):
+    """A blade is a physical container that can host one or multiple nodes"""
 
     def __init__(
         self,
@@ -276,7 +240,7 @@ class Blade(Computer):
         status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
-        self.nodes = ComputerList[Node](nodes)
+        self.nodes = HardwareList[Node](nodes)
         self.status = status
 
     def pack(self) -> bytes:
@@ -314,12 +278,12 @@ class Chassis(Hardware):
         name: str,
         model: str,
         number: int,
-        servers: Optional[List[Server]],
-        blades: Optional[List[Blade]],
+        servers: List[Server],
+        blades: List[Blade],
     ):
         super().__init__(serial_number, name, model, number)
-        self.servers = ComputerList[Server](servers) if servers else None
-        self.blades = ComputerList[Blade](blades) if blades else None
+        self.servers = ComputerList[Server](servers)
+        self.blades = HardwareList[Blade](blades)
 
 
 T = TypeVar("T", bound=Computer)
