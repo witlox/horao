@@ -6,19 +6,12 @@ import logging
 from abc import ABC
 from typing import List, Optional, TypeVar, Generic, Iterable
 
-from horao.crdts import FractionallyIndexedArray
-from horao.crdts.data_types import Nothing, String, Integer, Float
+from packify import pack, unpack
+
+from horao.models.crdt import LastWriterWinsMap
 from horao.models.decorators import instrument_class_function
 from horao.models.network import NIC, DeviceStatus
 from horao.models.components import Accelerator, Hardware, CPU, RAM, Disk, HardwareList
-
-_inject = {
-    "String": String,
-    "Integer": Integer,
-    "Float": Float,
-    "Nothing": Nothing,
-    "NIC": NIC,
-}
 
 
 class Computer(ABC):
@@ -34,36 +27,17 @@ class Computer(ABC):
         disks: Optional[List[Disk]],
         accelerators: Optional[List[Accelerator]],
     ):
-        self._log = logging.getLogger(__name__)
-        self._serial_number = String(serial_number)
-        self._name = String(name)
-        self._model = String(model)
-        self._number = Integer(number)
-        self.cpus = HardwareList[CPU]().extend(cpus)
-        self.rams = HardwareList[RAM]().extend(rams)
-        self.nics = HardwareList[NIC](inject=_inject).extend(nics)
-        self.disks = HardwareList[Disk]().extend(disks) if disks else Nothing()
-        self.accelerator = (
-            HardwareList[Accelerator].extend(accelerators)
-            if accelerators
-            else Nothing()
+        self.serial_number = serial_number
+        self.name = name
+        self.model = model
+        self.number = number
+        self.cpus = HardwareList[CPU](cpus)
+        self.rams = HardwareList[RAM](rams)
+        self.nics = HardwareList[NIC](nics)
+        self.disks = HardwareList[Disk](disks) if disks else None
+        self.accelerators = (
+            HardwareList[Accelerator](accelerators) if accelerators else None
         )
-
-    @property
-    def serial_number(self) -> str:
-        return self._serial_number.value
-
-    @property
-    def name(self) -> str:
-        return self._name.value
-
-    @property
-    def model(self) -> str:
-        return self._model.value
-
-    @property
-    def number(self) -> int:
-        return self._number.value
 
     def __eq__(self, other):
         """
@@ -78,6 +52,43 @@ class Computer(ABC):
         if not self.name == other.name:
             return False
         return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __gt__(self, other):
+        return self.serial_number > other.serial_number
+
+    def __lt__(self, other):
+        return self.serial_number < other.serial_number
+
+    def __hash__(self):
+        return hash(self.serial_number)
+
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.cpus,
+                self.rams,
+                self.nics,
+                self.disks,
+                self.accelerators,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Computer:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial_number, name, model, number, cpus, rams, nics, disks, accelerators = (
+            unpack(data, inject=inject)
+        )
+        return cls(
+            serial_number, name, model, number, cpus, rams, nics, disks, accelerators
+        )
 
 
 class Server(Computer):
@@ -97,11 +108,51 @@ class Server(Computer):
         super().__init__(
             serial_number, name, model, number, cpus, rams, nics, disks, accelerators
         )
-        self._status = True if status == DeviceStatus.Up else False
+        self.status = status
 
-    @property
-    def status(self) -> DeviceStatus:
-        return DeviceStatus.Up if self._status else DeviceStatus.Down
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.cpus,
+                self.rams,
+                self.nics,
+                self.disks,
+                self.accelerators,
+                1 if self.status == DeviceStatus.Up else 0,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Server:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        (
+            serial_number,
+            name,
+            model,
+            number,
+            cpus,
+            rams,
+            nics,
+            disks,
+            accelerators,
+            status,
+        ) = unpack(data, inject=inject)
+        return cls(
+            serial_number,
+            name,
+            model,
+            number,
+            cpus,
+            rams,
+            nics,
+            disks,
+            accelerators,
+            DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+        )
 
 
 class Module(Computer):
@@ -123,14 +174,54 @@ class Module(Computer):
         super().__init__(
             serial_number, name, model, number, cpus, rams, nics, disks, accelerators
         )
-        self._status = True if status == DeviceStatus.Up else False
+        self.status = status
 
-    @property
-    def status(self) -> DeviceStatus:
-        return DeviceStatus.Up if self._status else DeviceStatus.Down
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.cpus,
+                self.rams,
+                self.nics,
+                self.disks,
+                self.accelerators,
+                1 if self.status == DeviceStatus.Up else 0,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Module:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        (
+            serial_number,
+            name,
+            model,
+            number,
+            cpus,
+            rams,
+            nics,
+            disks,
+            accelerators,
+            status,
+        ) = unpack(data, inject=inject)
+        return cls(
+            serial_number,
+            name,
+            model,
+            number,
+            cpus,
+            rams,
+            nics,
+            disks,
+            accelerators,
+            DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+        )
 
 
-class Node(Hardware):
+class Node(Computer):
     """A node is a physical server that can host multiple modules"""
 
     def __init__(
@@ -143,16 +234,38 @@ class Node(Hardware):
         status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
-        self._log = logging.getLogger(__name__)
-        self.modules = HardwareList[Module]().extends(modules)
-        self._status = True if status == DeviceStatus.Up else False
+        self.modules = ComputerList[Module](modules)
+        self.status = status
 
-    @property
-    def status(self) -> DeviceStatus:
-        return DeviceStatus.Up if self._status else DeviceStatus.Down
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.modules,
+                1 if self.status == DeviceStatus.Up else 0,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Node:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial_number, name, model, number, modules, status = unpack(
+            data, inject=inject
+        )
+        return cls(
+            serial_number,
+            name,
+            model,
+            number,
+            modules,
+            DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+        )
 
 
-class Blade(Hardware):
+class Blade(Computer):
     """A blade is a physical server that can host multiple nodes"""
 
     def __init__(
@@ -165,12 +278,33 @@ class Blade(Hardware):
         status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
-        self.nodes = HardwareList[Node]().extends(nodes)
-        self._status = True if status == DeviceStatus.Up else False
+        self.nodes = ComputerList[Node](nodes)
+        self.status = status
 
-    @property
-    def status(self) -> DeviceStatus:
-        return DeviceStatus.Up if self._status else DeviceStatus.Down
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.nodes,
+                1 if self.status == DeviceStatus.Up else 0,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Blade:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial_number, name, model, number, nodes, status = unpack(data, inject=inject)
+        return cls(
+            serial_number,
+            name,
+            model,
+            number,
+            nodes,
+            DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+        )
 
 
 class Chassis(Hardware):
@@ -186,9 +320,8 @@ class Chassis(Hardware):
         blades: Optional[List[Blade]],
     ):
         super().__init__(serial_number, name, model, number)
-        self._log = logging.getLogger(__name__)
-        self.servers = HardwareList[Server]().extend(servers) if servers else Nothing()
-        self.blades = HardwareList[Blade]().extend(blades) if blades else Nothing()
+        self.servers = ComputerList[Server](servers) if servers else None
+        self.blades = ComputerList[Blade](blades) if blades else None
 
 
 T = TypeVar("T", bound=Computer)
@@ -197,11 +330,24 @@ T = TypeVar("T", bound=Computer)
 class ComputerList(Generic[T]):
     """ComputerList behaves as a list of composed hardware instances"""
 
-    def __init__(self, content: List[T] = None) -> None:
-        self._log = logging.getLogger(__name__)
-        self._computers = FractionallyIndexedArray()
+    def __init__(
+        self,
+        content: List[T] = None,
+        computers: LastWriterWinsMap = None,
+        inject=None,
+    ) -> None:
+        """
+        Initialize from an LastWriterWinsMap of item positions and a shared clock if supplied otherwise default.
+        :param content: list of Hardware instances
+        :param hardware: LastWriterWinsMap of hardware items
+        :param inject: optional data to inject during unpacking
+        """
+        self.inject = {**globals()} if not inject else {**globals(), **inject}
+        self.log = logging.getLogger(__name__)
+        self.computers = LastWriterWinsMap() if computers is None else computers
         if content:
             self.extend(content)
+        self.iterator = 0
 
     @instrument_class_function(name="append", level=logging.DEBUG)
     def append(self, item: T) -> T:
@@ -210,45 +356,57 @@ class ComputerList(Generic[T]):
         :param item: instance of Computer
         :return: None
         """
-        if not isinstance(item, Computer):
-            raise ValueError("Cannot append non-computer instance to ComputerList")
-        clock_uuid, time_stamp, data = self._computers.put_first(item, item.name)
-        self._log.debug(
-            f"Added {item.name} (clock_uuid={clock_uuid}, time_stamp={time_stamp})"
-        )
+        self.computers.set(len(self.computers), item, hash(item))
         return item
 
     def clear(self) -> None:
-        self._computers = FractionallyIndexedArray()
+        """
+        Clear the list, not the history
+        :return: None
+        """
+        # todo check history is consistent
+        self.iterator = 0
+        self.computers = LastWriterWinsMap()
 
     def copy(self) -> ComputerList[T]:
-        results = ComputerList()
-        results.extend(self.iter())
+        results = ComputerList(inject=self.inject)
+        results.extend(iter(self))
         return results
 
     def count(self):
-        return len(self._computers.read_full())
+        return len(self)
 
     def extend(self, other: Iterable[T]) -> ComputerList[T]:
         for item in other:
-            self._computers.append(item, item.name)
+            self.computers.set(len(self), item, hash(item))
         return self
 
-    def index(self, item: T) -> Optional[T]:
-        return next(
-            iter([i for i, h in enumerate(self._computers.read_full()) if h == item]),
+    def index(self, item: T) -> int:
+        """
+        Return the index of the computer instance
+        :param item: instance to search for
+        :return: int
+        :raises ValueError: item not found
+        """
+        result = next(
+            iter([i for i, h in self.computers.read(inject=self.inject) if h == item]),
             None,
         )
+        if result is None:
+            self.log.error(f"{item.name} not found.")
+            raise ValueError(f"{item} not found.")
+        return result
 
     def insert(self, index: int, item: T) -> None:
-        self._computers.put(item, item.name, Float(index))
+        self.computers.set(index, item, hash(item))
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
     def pop(self, index: int, default: T = None) -> Optional[T]:
-        if index >= len(self._computers.read_full()):
+        if index >= len(self.computers.read(inject=self.inject)):
+            self.log.debug(f"Index {index} out of bounds, returning default.")
             return default
-        item = self._computers.read_full()[index]
-        self._computers.delete(item, item.name)
+        item = self.computers.read(inject=self.inject)[index]
+        self.computers.unset(item, hash(item))
         return item
 
     @instrument_class_function(name="remove", level=logging.DEBUG)
@@ -257,93 +415,97 @@ class ComputerList(Generic[T]):
         Remove a computer instance from the list
         :param item: instance of Hardware
         :return: None
+        :raises ValueError: item not found
         """
-        fi_hardware = next(
-            iter([h for h in self._computers.read_full() if h == item]), None
+        local_item = next(
+            iter([h for _, h in self.computers.read(inject=self.inject) if h == item]),
+            None,
         )
-        if not fi_hardware:
-            self._log.error(f"{item.name} not found.")
-        clock_uuid, time_stamp, data = self._computers.delete(fi_hardware, item.name)
-        self._log.debug(
-            f"Removed {item.name} (clock_uuid={clock_uuid}, time_stamp={time_stamp})"
-        )
+        if not local_item:
+            self.log.debug(f"{item.name} not found.")
+            raise ValueError(f"{item} not found.")
+        self.computers.unset(local_item, hash(item))
 
     def reverse(self) -> HardwareList[T]:
-        return self._computers.read_full()[::-1]
+        """
+        cannot reverse a list inplace in a CRDT
+        :return: None
+        :raises: NotImplementedError
+        """
+        raise NotImplementedError("Cannot reverse a list inplace in a CRDT")
 
     def sort(self, item: T = None, reverse: bool = False) -> HardwareList[T]:
         """
-        Not super valuable, orders by Computer Serial number
-        :param item: key to sort by
-        :param reverse: reverse the sort
-        :return: HardwareList
+        cannot sort a list inplace in a CRDT
+        :return: None
+        :raises: NotImplementedError
         """
-        return self._computers.read_full().sort(key=item, reverse=reverse)
+        raise NotImplementedError("Cannot sort a list inplace in a CRDT")
 
     def __len__(self) -> int:
-        return self.len()
+        return len(self.computers.read(inject=self.inject))
 
     def __eq__(self, other: ComputerList[T]) -> bool:
-        return self._computers.read_full() == other._computers.read_full()
+        return self.computers.read(inject=self.inject) == other.computers.read(
+            inject=self.inject
+        )
 
     def __ne__(self, other: ComputerList[T]) -> bool:
-        return self._computers.read_full() != other._computers.read_full()
-
-    def __ge__(self, other: ComputerList[T]) -> bool:
-        return self._computers.read_full() >= other._computers.read_full()
-
-    def __gt__(self, other: ComputerList[T]) -> bool:
-        return self._computers.read_full() > other._computers.read_full()
-
-    def __le__(self, other: ComputerList[T]):
-        return self._computers.read_full() <= other._computers.read_full()
-
-    def __lt__(self, other: ComputerList[T]):
-        return self._computers.read_full() < other._computers.read_full()
+        return self.computers.read(inject=self.inject) != other.computers.read(
+            inject=self.inject
+        )
 
     def __contains__(self, item: T) -> bool:
-        return item in self._computers.read_full()
+        return item in self.computers.read(inject=self.inject)
 
     def __delitem__(self, item: T) -> None:
-        if item not in self._computers.read_full():
+        if item not in self.computers.read(inject=self.inject):
             raise KeyError(f"{item} not found.")
         self.remove(item)
 
-    def __getattr__(self, item: T) -> T:
-        return self._computers.read_full()[item]
-
     def __getitem__(self, index: int) -> T:
-        return self._computers.read_full()[index]
+        return self.computers.read(inject=self.inject)[index]
 
     def __setitem__(self, index: int, value: T) -> None:
-        self._computers.put(value, value.name, Float(index))
+        self.computers.set(index, value, hash(value))
 
     def __iter__(self) -> Iterable[T]:
-        for item in self._computers.read_full():
+        for _, item in self.computers.read(inject=self.inject):
             yield item
 
     def __next__(self) -> T:
-        return next(self._computers.read_full())
-
-    def __mul__(self, other: ComputerList[T]):
-        raise TypeError("Cannot multiply ComputerList")
+        if self.iterator >= len(self.computers.read(inject=self.inject)):
+            self.iterator = 0
+            raise StopIteration
+        item = self.computers.read(inject=self.inject)[self.iterator]
+        self.iterator += 1
+        return item
 
     def __add__(self, other: ComputerList[T]) -> ComputerList[T]:
-        return self.extend(other.iter())
+        return self.extend(iter(other))
 
     def __sub__(self, other: ComputerList[T]) -> ComputerList[T]:
-        for item in other.iter():
+        for item in iter(other):
             self.remove(item)
         return self
 
     def __repr__(self) -> str:
-        return f"ComputerList({self._computers.read_full()})"
+        return f"ComputerList({self.computers.read(inject=self.inject)})"
 
     def __reversed__(self) -> HardwareList[T]:
-        return self.reverse()
+        return self.computers.read(inject=self.inject)[::-1]
 
     def __sizeof__(self) -> int:
         return self.count()
 
     def __hash__(self):
-        return hash(self._computers)
+        return hash(self.computers)
+
+    def pack(self) -> bytes:
+        return self.computers.pack()
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> ComputerList[T]:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        computers = LastWriterWinsMap.unpack(data, inject=inject)
+        return cls(computers=computers, inject=inject)

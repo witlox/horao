@@ -5,8 +5,7 @@ from __future__ import annotations
 import logging
 from typing import List, Optional, Dict, Tuple, Iterable
 
-from horao.crdts import LastWriterWinsMap
-from horao.crdts.data_types import String
+from .crdt import LastWriterWinsMap
 from .composite import Server, Chassis, Disk, NIC, ComputerList
 from .network import Switch
 from .components import Hardware, HardwareList
@@ -42,20 +41,12 @@ class DataCenter:
 
     def __init__(self, name: str, number: int):
         self._log = logging.getLogger(__name__)
-        self._name = String(name)
-        self._number = number
-        self._rows = LastWriterWinsMap()
-
-    @property
-    def name(self) -> str:
-        return self._name.value
-
-    @property
-    def number(self) -> int:
-        return self._number
+        self.name = name
+        self.number = number
+        self.rows = LastWriterWinsMap()
 
     def clear(self) -> None:
-        self._rows = LastWriterWinsMap()
+        self.rows = LastWriterWinsMap()
 
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:

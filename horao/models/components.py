@@ -9,35 +9,20 @@ from __future__ import annotations
 
 import logging
 from abc import ABC
-from typing import Optional, Generic, List, Iterable, TypeVar
+from typing import Optional, Generic, List, Iterable, TypeVar, Callable
 
-from horao.crdts import FractionallyIndexedArray
-from horao.crdts.data_types import Integer, Nothing, String, Float
+from packify import pack, unpack
+
+from horao.models.crdt import LastWriterWinsMap
 from horao.models.decorators import instrument_class_function
 
 
 class Hardware(ABC):
     def __init__(self, serial_number: str, name: str, model: str, number: int):
-        self._serial_number = String(serial_number)
-        self._name = String(name)
-        self._model = String(model)
-        self._number = Integer(number)
-
-    @property
-    def serial_number(self) -> str:
-        return self._serial_number.value
-
-    @property
-    def name(self) -> str:
-        return self._name.value
-
-    @property
-    def model(self) -> str:
-        return self._model.value
-
-    @property
-    def number(self) -> int:
-        return self._number.value
+        self.serial_number = serial_number
+        self.name = name
+        self.model = model
+        self.number = number
 
     def __eq__(self, other: Hardware) -> bool:
         """
@@ -76,6 +61,25 @@ class Hardware(ABC):
         """
         return hash((self.serial_number, self.name, self.model))
 
+    def pack(self) -> bytes:
+        """
+        Serialize the hardware instance
+        :return: instance as bytes
+        """
+        return pack([self.serial_number, self.name, self.model, self.number])
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Hardware:
+        """
+        Deserialize the hardware instance
+        :param data: bytes of instance
+        :param inject: optional dictionary of global variables
+        :return: instance of Hardware
+        """
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial, name, model, number = unpack(data, inject=inject)
+        return cls(serial, name, model, number)
+
 
 class RAM(Hardware):
     def __init__(
@@ -88,18 +92,26 @@ class RAM(Hardware):
         speed_mhz: Optional[int],
     ):
         super().__init__(serial_number, name, model, number)
-        self._size_gb = Integer(size_gb)
-        self._speed_mhz = Integer(speed_mhz) if speed_mhz else Nothing()
+        self.size_gb = size_gb
+        self.speed_mhz = speed_mhz
 
-    @property
-    def size_gb(self) -> int:
-        return self._size_gb.value
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.size_gb,
+                self.speed_mhz,
+            ]
+        )
 
-    @property
-    def speed_mhz(self) -> Optional[int]:
-        if isinstance(self._speed_mhz, Nothing):
-            return None
-        return self._speed_mhz.value
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> RAM:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial, name, model, number, size_gb, speed_mhz = unpack(data, inject=inject)
+        return cls(serial, name, model, number, size_gb, speed_mhz)
 
 
 class CPU(Hardware):
@@ -114,23 +126,30 @@ class CPU(Hardware):
         features: Optional[str],
     ):
         super().__init__(serial_number, name, model, number)
-        self._clock_speed = Integer(clock_speed)
-        self._cores = Integer(cores)
-        self._features = String(features) if features else Nothing()
+        self.clock_speed = clock_speed
+        self.cores = cores
+        self.features = features
 
-    @property
-    def clock_speed(self) -> int:
-        return self._clock_speed.value
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.clock_speed,
+                self.cores,
+                self.features,
+            ]
+        )
 
-    @property
-    def cores(self) -> int:
-        return self._cores.value
-
-    @property
-    def features(self) -> Optional[str]:
-        if isinstance(self._features, Nothing):
-            return None
-        return self._features.value
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> CPU:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial, name, model, number, clock_speed, cores, features = unpack(
+            data, inject=inject
+        )
+        return cls(serial, name, model, number, clock_speed, cores, features)
 
 
 class Accelerator(Hardware):
@@ -145,25 +164,30 @@ class Accelerator(Hardware):
         clock_speed: Optional[int],
     ):
         super().__init__(serial_number, name, model, number)
-        self._memory_gb = Integer(memory_gb)
-        self._chip = String(chip) if chip else Nothing()
-        self._clock_speed = Integer(clock_speed) if clock_speed else Nothing()
+        self.memory_gb = memory_gb
+        self.chip = chip
+        self.clock_speed = clock_speed
 
-    @property
-    def memory_gb(self) -> int:
-        return self._memory_gb.value
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.memory_gb,
+                self.chip,
+                self.clock_speed,
+            ]
+        )
 
-    @property
-    def chip(self) -> Optional[str]:
-        if isinstance(self._chip, Nothing):
-            return None
-        return self._chip.value
-
-    @property
-    def clock_speed(self) -> Optional[int]:
-        if isinstance(self._clock_speed, Nothing):
-            return None
-        return self._clock_speed.value
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Accelerator:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial, name, model, number, memory_gb, chip, clock_speed = unpack(
+            data, inject=inject
+        )
+        return cls(serial, name, model, number, memory_gb, chip, clock_speed)
 
 
 class Disk(Hardware):
@@ -176,11 +200,24 @@ class Disk(Hardware):
         size_gb: int,
     ):
         super().__init__(serial_number, name, model, number)
-        self._size_gb = Integer(size_gb)
+        self.size_gb = size_gb
 
-    @property
-    def size_gb(self) -> int:
-        return self._size_gb.value
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                self.size_gb,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Disk:
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        serial, name, model, number, size_gb = unpack(data, inject=inject)
+        return cls(serial, name, model, number, size_gb)
 
 
 T = TypeVar("T", bound=Hardware)
@@ -189,61 +226,83 @@ T = TypeVar("T", bound=Hardware)
 class HardwareList(Generic[T]):
     """HardwareList behaves as a list of Hardware instances"""
 
-    def __init__(self, content: List[T] = None, inject=None) -> None:
-        self._inject = {**globals()} if not inject else {**globals(), **inject}
-        self._log = logging.getLogger(__name__)
-        self._hardware = FractionallyIndexedArray()
+    def __init__(
+        self,
+        content: List[T] = None,
+        hardware: LastWriterWinsMap = None,
+        inject=None,
+    ) -> None:
+        """
+        Initialize from an LastWriterWinsMap of item positions and a shared clock if supplied otherwise default.
+        :param content: list of Hardware instances
+        :param hardware: LastWriterWinsMap of hardware items
+        :param inject: optional data to inject during unpacking
+        """
+        self.inject = {**globals()} if not inject else {**globals(), **inject}
+        self.log = logging.getLogger(__name__)
+        self.hardware = LastWriterWinsMap() if not hardware else hardware
         if content:
             self.extend(content)
+        self.iterator = 0
 
     @instrument_class_function(name="append", level=logging.DEBUG)
     def append(self, item: T) -> T:
         """
         Append a hardware instance to the list
         :param item: instance of Hardware
-        :return: None
+        :return: inserted item
         """
-        if not isinstance(item, Hardware):
-            raise ValueError("Cannot append non-hardware instance to HardwareList")
-        clock_uuid, time_stamp, data = self._hardware.put_first(
-            item, item.name, inject=self._inject
-        )
-        self._log.debug(
-            f"Added {item.name} (clock_uuid={clock_uuid}, time_stamp={time_stamp})"
-        )
+        self.hardware.set(len(self.hardware), item, hash(item))
         return item
 
     def clear(self) -> None:
-        self._hardware = FractionallyIndexedArray()
+        """
+        Clear the list, not the history
+        :return: None
+        """
+        # todo check history is consistent
+        self.iterator = 0
+        self.hardware = LastWriterWinsMap()
 
     def copy(self) -> HardwareList[T]:
-        results = HardwareList(inject=self._inject)
-        results.extend(self.iter())
+        results = HardwareList(inject=self.inject)
+        results.extend(iter(self))
         return results
 
     def count(self):
-        return len(self._hardware.read_full())
+        return len(self)
 
     def extend(self, other: Iterable[T]) -> HardwareList[T]:
         for item in other:
-            self._hardware.append(item, hash(item))
+            self.hardware.set(len(self), item, hash(item))
         return self
 
-    def index(self, item: T) -> Optional[T]:
-        return next(
-            iter([i for i, h in enumerate(self._hardware.read_full()) if h == item]),
+    def index(self, item: T) -> int:
+        """
+        Return the index of the hardware instance
+        :param item: instance to search for
+        :return: int
+        :raises ValueError: item not found
+        """
+        result = next(
+            iter([i for i, h in self.hardware.read(inject=self.inject) if h == item]),
             None,
         )
+        if result is None:
+            self.log.error(f"{item.name} not found.")
+            raise ValueError(f"{item} not found.")
+        return result
 
     def insert(self, index: int, item: T) -> None:
-        self._hardware.put(item, hash(item), Float(index), inject=self._inject)
+        self.hardware.set(index, item, hash(item))
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
     def pop(self, index: int, default: T = None) -> Optional[T]:
-        if index >= len(self._hardware.read_full()):
+        if index >= len(self.hardware.read(inject=self.inject)):
+            self.log.debug(f"Index {index} out of bounds, returning default.")
             return default
-        item = self._hardware.read_full(inject=self._inject)[index]
-        self._hardware.delete(item, item.name)
+        item = self.hardware.read(inject=self.inject)[index]
+        self.hardware.unset(item, hash(item))
         return item
 
     @instrument_class_function(name="remove", level=logging.DEBUG)
@@ -252,112 +311,107 @@ class HardwareList(Generic[T]):
         Remove a hardware instance from the list
         :param item: instance of Hardware
         :return: None
+        :raises ValueError: item not found
         """
-        fi_hardware = next(
-            iter(
-                [h for h in self._hardware.read_full(inject=self._inject) if h == item]
-            ),
+        local_item = next(
+            iter([h for _, h in self.hardware.read(inject=self.inject) if h == item]),
             None,
         )
-        if not fi_hardware:
-            self._log.error(f"{item.name} not found.")
-        clock_uuid, time_stamp, data = self._hardware.delete(
-            fi_hardware, item.name, inject=self._inject
-        )
-        self._log.debug(
-            f"Removed {item.name} (clock_uuid={clock_uuid}, time_stamp={time_stamp})"
-        )
+        if not local_item:
+            self.log.debug(f"{item.name} not found.")
+            raise ValueError(f"{item} not found.")
+        self.hardware.unset(local_item, hash(item))
 
-    def reverse(self) -> HardwareList[T]:
-        return self._hardware.read_full()[::-1]
+    def reverse(self) -> None:
+        """
+        cannot reverse a list inplace in a CRDT
+        :return: None
+        :raises: NotImplementedError
+        """
+        raise NotImplementedError("Cannot reverse a list inplace in a CRDT")
 
-    def sort(self, item: T = None, reverse: bool = False) -> HardwareList[T]:
+    def sort(self, item: T = None, reverse: bool = False) -> None:
         """
-        Not super valuable, orders by Hardware Serial number
-        :param item: key to sort by
-        :param reverse: reverse the sort
-        :return: HardwareList
+        cannot sort a list inplace in a CRDT
+        :return: None
+        :raises: NotImplementedError
         """
-        return self._hardware.read_full(inject=self._inject).sort(
-            key=item, reverse=reverse
-        )
+        raise NotImplementedError("Cannot sort a list inplace in a CRDT")
 
     def __len__(self) -> int:
-        return self.len()
+        return len(self.hardware.read(inject=self.inject))
 
     def __eq__(self, other: HardwareList[T]) -> bool:
-        return self._hardware.read_full(
-            inject=self._inject
-        ) == other._hardware.read_full(inject=self._inject)
+        return self.hardware.read(inject=self.inject) == other.hardware.read(
+            inject=self.inject
+        )
 
     def __ne__(self, other: HardwareList[T]) -> bool:
-        return self._hardware.read_full(
-            inject=self._inject
-        ) != other._hardware.read_full(inject=self._inject)
-
-    def __ge__(self, other: HardwareList[T]) -> bool:
-        return self._hardware.read_full(
-            inject=self._inject
-        ) >= other._hardware.read_full(inject=self._inject)
-
-    def __gt__(self, other: HardwareList[T]) -> bool:
-        return self._hardware.read_full(
-            inject=self._inject
-        ) > other._hardware.read_full(inject=self._inject)
-
-    def __le__(self, other: HardwareList[T]):
-        return self._hardware.read_full(
-            inject=self._inject
-        ) <= other._hardware.read_full(inject=self._inject)
-
-    def __lt__(self, other: HardwareList[T]):
-        return self._hardware.read_full(
-            inject=self._inject
-        ) < other._hardware.read_full(inject=self._inject)
+        return self.hardware.read(inject=self.inject) != other.hardware.read(
+            inject=self.inject
+        )
 
     def __contains__(self, item: T) -> bool:
-        return item in self._hardware.read_full(inject=self._inject)
+        return item in self.hardware.read(inject=self.inject)
 
     def __delitem__(self, item: T) -> None:
-        if item not in self._hardware.read_full(inject=self._inject):
+        if item not in self.hardware.read(inject=self.inject):
             raise KeyError(f"{item} not found.")
         self.remove(item)
 
-    def __getattr__(self, item: T) -> T:
-        return self._hardware.read_full(inject=self._inject)[item]
-
     def __getitem__(self, index: int) -> T:
-        return self._hardware.read_full(inject=self._inject)[index]
+        return self.hardware.read(inject=self.inject)[index]
 
     def __setitem__(self, index: int, value: T) -> None:
-        self._hardware.put(value, hash(value), Float(index))
+        self.hardware.set(index, value, hash(value))
 
     def __iter__(self) -> Iterable[T]:
-        for item in self._hardware.read_full(inject=self._inject):
+        for _, item in self.hardware.read(inject=self.inject):
             yield item
 
     def __next__(self) -> T:
-        return next(self._hardware.read_full(inject=self._inject))
-
-    def __mul__(self, other: HardwareList[T]):
-        raise TypeError("Cannot multiply HardwareList")
+        if self.iterator >= len(self.hardware.read(inject=self.inject)):
+            self.iterator = 0
+            raise StopIteration
+        item = self.hardware.read(inject=self.inject)[self.iterator]
+        self.iterator += 1
+        return item
 
     def __add__(self, other: HardwareList[T]) -> HardwareList[T]:
-        return self.extend(other.iter())
+        return self.extend(iter(other))
 
     def __sub__(self, other: HardwareList[T]) -> HardwareList[T]:
-        for item in other.iter():
+        for item in iter(other):
             self.remove(item)
         return self
 
     def __repr__(self) -> str:
-        return f"HardwareList({self._hardware.read_full()})"
+        return f"HardwareList({self.hardware.read(inject=self.inject)})"
 
     def __reversed__(self) -> HardwareList[T]:
-        return self.reverse()
+        return self.hardware.read(inject=self.inject)[::-1]
 
     def __sizeof__(self) -> int:
         return self.count()
 
     def __hash__(self):
-        return hash(self._hardware)
+        return hash(self.hardware)
+
+    def pack(self) -> bytes:
+        """
+        Pack the data and metadata into a bytes string.
+        :return: bytes
+        """
+        return self.hardware.pack()
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject=None) -> HardwareList[T]:
+        """
+        Unpack the data bytes string into an instance.
+        :param data: serialized FractionallyIndexedArray needing unpacking
+        :param inject: optional data to inject during unpacking
+        :return: FractionallyIndexedArray
+        """
+        inject = {**globals(), **inject} if inject is not None else {**globals()}
+        positions = LastWriterWinsMap.unpack(data, inject)
+        return cls(hardware=positions, inject=inject)

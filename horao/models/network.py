@@ -100,6 +100,23 @@ class NetworkDevice(Hardware):
         super().__init__(serial_number, name, model, number)
         self.ports = ports
 
+    def __eq__(self, other: NetworkDevice) -> bool:
+        return self.serial_number == other.serial_number and self.model == other.model
+
+    def __hash__(self) -> int:
+        return hash((self.serial_number, self.model))
+
+    def pack(self) -> bytes:
+        return pack(
+            [self.serial_number, self.name, self.model, self.number, self.ports]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> NetworkDevice:
+        inject = {**globals()} if not inject else {**globals(), **inject}
+        serial, name, model, number, ports = unpack(*data, inject=inject)
+        return cls(serial, name, model, number, ports)
+
 
 class NIC(NetworkDevice):
     def __init__(
@@ -108,13 +125,15 @@ class NIC(NetworkDevice):
         super().__init__(serial_number, name, model, number, ports)
 
     def pack(self) -> bytes:
-        return pack([self.name, self.model, self.number, self.ports])
+        return pack(
+            [self.serial_number, self.name, self.model, self.number, self.ports]
+        )
 
     @classmethod
     def unpack(cls, data: bytes, /, *, inject: dict = None) -> NIC:
         inject = {**globals()} if not inject else {**globals(), **inject}
-        name, model, number, ports = unpack(*data, inject=inject)
-        return cls(name, model, number, ports)
+        serial, name, model, number, ports = unpack(*data, inject=inject)
+        return cls(serial, name, model, number, ports)
 
 
 class Firewall(NetworkDevice):
@@ -133,6 +152,35 @@ class Firewall(NetworkDevice):
         self.status = status
         self.wan_ports = wan_ports
 
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                1 if self.status == DeviceStatus.Up else 0,
+                self.ports,
+                self.wan_ports,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Firewall:
+        inject = {**globals()} if not inject else {**globals(), **inject}
+        serial, name, model, number, status, ports, wan_ports = unpack(
+            data, inject=inject
+        )
+        return cls(
+            serial_number=serial,
+            name=name,
+            model=model,
+            number=number,
+            status=DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+            lan_ports=ports,
+            wan_ports=wan_ports,
+        )
+
 
 class Router(NetworkDevice):
     def __init__(
@@ -150,6 +198,44 @@ class Router(NetworkDevice):
         self.router_type = router_type
         self.status = status
         self.wan_ports = wan_ports
+
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                1 if self.router_type == RouterType.Core else 2,
+                1 if self.status == DeviceStatus.Up else 0,
+                self.ports,
+                self.wan_ports,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Router:
+        inject = {**globals()} if not inject else {**globals(), **inject}
+        (
+            serial,
+            name,
+            model,
+            number,
+            router_type,
+            status,
+            ports,
+            wan_ports,
+        ) = unpack(data, inject=inject)
+        return cls(
+            serial_number=serial,
+            name=name,
+            model=model,
+            number=number,
+            router_type=RouterType.Core if router_type == 1 else RouterType.Edge,
+            status=DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+            lan_ports=ports,
+            wan_ports=wan_ports,
+        )
 
 
 class Switch(NetworkDevice):
@@ -172,6 +258,58 @@ class Switch(NetworkDevice):
         self.status = status
         self.managed = managed
         self.uplink_ports = uplink_ports
+
+    def pack(self) -> bytes:
+        return pack(
+            [
+                self.serial_number,
+                self.name,
+                self.model,
+                self.number,
+                2 if self.layer == LinkLayer.Layer2 else 3,
+                (
+                    1
+                    if self.switch_type == SwitchType.Access
+                    else 2 if self.switch_type == SwitchType.Distribution else 3
+                ),
+                1 if self.status == DeviceStatus.Up else 0,
+                1 if self.managed else 0,
+                self.ports,
+                self.uplink_ports,
+            ]
+        )
+
+    @classmethod
+    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Switch:
+        inject = {**globals()} if not inject else {**globals(), **inject}
+        (
+            serial,
+            name,
+            model,
+            number,
+            layer,
+            switch_type,
+            status,
+            managed,
+            ports,
+            uplink_ports,
+        ) = unpack(data, inject=inject)
+        return cls(
+            serial_number=serial,
+            name=name,
+            model=model,
+            number=number,
+            layer=LinkLayer.Layer2 if layer == 2 else LinkLayer.Layer3,
+            switch_type=(
+                SwitchType.Access
+                if switch_type == 1
+                else SwitchType.Distribution if switch_type == 2 else SwitchType.Core
+            ),
+            status=DeviceStatus.Up if status == 1 else DeviceStatus.Down,
+            managed=True if managed == 1 else False,
+            lan_ports=ports,
+            uplink_ports=uplink_ports,
+        )
 
 
 class DataCenterNetwork:
