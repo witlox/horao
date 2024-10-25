@@ -32,9 +32,20 @@ class Computer(ABC):
         self.cpus = HardwareList[CPU](cpus)
         self.rams = HardwareList[RAM](rams)
         self.nics = HardwareList[NIC](nics)
-        self.disks = HardwareList[Disk](disks) if disks else None
-        self.accelerators = (
-            HardwareList[Accelerator](accelerators) if accelerators else None
+        self.disks = HardwareList[Disk](disks)
+        self.accelerators = HardwareList[Accelerator](accelerators)
+
+    def __copy__(self):
+        return Computer(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            list(iter(self.cpus)),
+            list(iter(self.rams)),
+            list(iter(self.nics)),
+            list(iter(self.disks)),
+            list(iter(self.accelerators)),
         )
 
     def __eq__(self, other):
@@ -107,6 +118,20 @@ class Server(Computer):
             serial_number, name, model, number, cpus, rams, nics, disks, accelerators
         )
         self.status = status
+
+    def __copy__(self):
+        return Server(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            list(iter(self.cpus)),
+            list(iter(self.rams)),
+            list(iter(self.nics)),
+            list(iter(self.disks)),
+            list(iter(self.accelerators)),
+            self.status,
+        )
 
     def pack(self) -> bytes:
         return pack(
@@ -192,12 +217,22 @@ class Node(Hardware):
         name: str,
         model: str,
         number: int,
-        modules: List[Module],
+        modules: Optional[List[Module]],
         status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
         self.modules = ComputerList[Module](modules)
         self.status = status
+
+    def __copy__(self):
+        return Node(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            list(iter(self.modules)),
+            self.status,
+        )
 
     def pack(self) -> bytes:
         return pack(
@@ -236,12 +271,22 @@ class Blade(Hardware):
         name: str,
         model: str,
         number: int,
-        nodes: List[Node],
+        nodes: Optional[List[Node]],
         status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
         self.nodes = HardwareList[Node](nodes)
         self.status = status
+
+    def __copy__(self):
+        return Blade(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            list(iter(self.nodes)),
+            self.status,
+        )
 
     def pack(self) -> bytes:
         return pack(
@@ -278,12 +323,22 @@ class Chassis(Hardware):
         name: str,
         model: str,
         number: int,
-        servers: List[Server],
-        blades: List[Blade],
+        servers: Optional[List[Server]],
+        blades: Optional[List[Blade]],
     ):
         super().__init__(serial_number, name, model, number)
         self.servers = ComputerList[Server](servers)
         self.blades = HardwareList[Blade](blades)
+
+    def __copy__(self):
+        return Chassis(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            list(iter(self.servers)),
+            list(iter(self.blades)),
+        )
 
 
 T = TypeVar("T", bound=Computer)

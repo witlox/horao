@@ -1,66 +1,56 @@
 from __future__ import annotations
 
-import struct
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum, auto
 from hashlib import sha256
-from typing import (
-    Hashable,
-    Type,
-    runtime_checkable,
-    Protocol,
-    Any,
-    Callable,
-    TypeVar,
-    Generic,
-)
+from typing import Any, Callable, Hashable, Optional, Protocol, runtime_checkable
 from uuid import uuid4
-
-from packify import SerializableType, pack, unpack
 
 
 @dataclass
 class ScalarClock:
     """Lamport logical scalar clock."""
 
-    counter: int = field(default=1)
+    counter: float = field(default=datetime.timestamp(datetime.now(tz=timezone.utc)))
     uuid: bytes = field(default_factory=lambda: uuid4().bytes)
-    default_time_stamp: int = field(default=0)
+    default_time_stamp: float = field(
+        default=datetime.timestamp(datetime.now(tz=timezone.utc))
+    )
 
-    def read(self) -> int:
+    def read(self) -> float:
         """
         Return the current timestamp.
-        :return: int
+        :return: unix timestamp
         """
         return self.counter
 
-    def update(self, data: int) -> int:
+    def update(self, data: float) -> float:
         """
         Update the clock and return the current time stamp.
-        :param data: int (new clock value)
-        :return: int (clock value set)
-        :raises TypeError: data is not an int
+        :param data: unix timestamp (new clock value)
+        :return: unix timestamp (clock value set)
         """
         if data >= self.counter:
-            self.counter = data + 1
-
+            self.counter = data
         return self.counter
 
     @staticmethod
-    def is_later(time_stamp: int, other_time_stamp: int) -> bool:
+    def is_later(time_stamp: float, other_time_stamp: float) -> bool:
         """
         Compare two timestamps, True if time_stamp > other_time_stamp.
-        :param time_stamp: int
-        :param other_time_stamp: int
+        :param time_stamp: unix timestamp
+        :param other_time_stamp: unix timestamp
         :return: bool
         """
         return time_stamp > other_time_stamp
 
     @staticmethod
-    def are_concurrent(time_stamp: int, other_time_stamp: int) -> bool:
+    def are_concurrent(time_stamp: float, other_time_stamp: float) -> bool:
         """
         Compare two timestamps, True if not time_stamp > other_time_stamp and not other_time_stamp > time_stamp.
-        :param time_stamp: int
-        :param other_time_stamp: int
+        :param time_stamp: unix timestamp
+        :param other_time_stamp: unix timestamp
         :return: bool
         """
         return not (time_stamp > other_time_stamp) and not (
@@ -68,12 +58,12 @@ class ScalarClock:
         )
 
     @staticmethod
-    def compare(time_stamp: int, other_time_stamp: int) -> int:
+    def compare(time_stamp: float, other_time_stamp: float) -> int:
         """
         Compare two timestamps, returns 1 if time_stamp is later than other_time_stamp; -1 if other_time_stamp is later than
         time_stamp; and 0 if they are concurrent/incomparable.
-        :param time_stamp: int
-        :param other_time_stamp: int
+        :param time_stamp: unix timestamp
+        :param other_time_stamp: unix timestamp
         :return: int
         """
         if time_stamp > other_time_stamp:
@@ -82,32 +72,13 @@ class ScalarClock:
             return -1
         return 0
 
-    def pack(self) -> bytes:
-        """
-        Packs the clock into bytes.
-        :return: bytes
-        """
-        return struct.pack(f"!I{len(self.uuid)}s", self.counter, self.uuid)
-
-    @classmethod
-    def unpack(cls, data: bytes, inject: dict = None) -> ScalarClock:
-        """
-        Unpacks a clock from bytes.
-        :param data: bytes
-        :param inject: optional injectable data
-        :return: ScalarClock
-        :raises ValueError: data is not at least 5 bytes
-        """
-        if len(data) < 5:
-            raise ValueError("data must be at least 5 bytes")
-
-        return cls(*struct.unpack(f"!I{len(data)-4}s", data))
-
     def __repr__(self) -> str:
-        return (
-            f"ScalarClock(counter={self.counter}, uuid={self.uuid.hex()}"
-            + f", default_ts={self.default_time_stamp})"
-        )
+        return f"ScalarClock(counter={self.counter}, uuid={self.uuid.hex()}, default_time_stamp={self.default_time_stamp})"
+
+
+class UpdateType(Enum):
+    Observed = auto()
+    Removed = auto()
 
 
 @dataclass
@@ -115,36 +86,21 @@ class Update:
     """Default class for encoding delta states."""
 
     clock_uuid: bytes
-    time_stamp: SerializableType
+    time_stamp: float
     data: Hashable
+    update_type: Optional[UpdateType]
+    writer: Optional[Hashable]
 
-    def pack(self) -> bytes:
-        """Serialize an Update."""
-        return pack(
-            [
-                self.clock_uuid,
-                self.time_stamp,
-                self.data,
-            ]
+    def sha256(self) -> bytes:
+        return sha256(f"{hash(self)}".encode("utf-8")).digest()
+
+    def __hash__(self):
+        return hash(
+            (self.clock_uuid, self.time_stamp, self.data, self.update_type, self.writer)
         )
 
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject=None) -> Update:
-        """
-        Deserialize Update. Packable accessible from the inject dict.
-        :param data: serialized Update needing unpacking
-        :param inject: optional data to inject during unpacking
-        :return: None
-        :raises ValueError: data of wrong length
-        """
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        if len(data) < 12:
-            raise ValueError("data must be at least 12 long")
-        u, t, d = unpack(data, inject=inject)
-        return Update(clock_uuid=u, time_stamp=t, data=d)
-
     def __repr__(self) -> str:
-        return f"Update(clock_uuid={self.clock_uuid.hex()}, time_stamp={self.time_stamp}, data={self.data})"
+        return f"Update(clock_uuid={self.clock_uuid.hex()}, time_stamp={self.time_stamp}, data={self.data}, update_type={self.update_type}, writer={self.writer})"
 
 
 @runtime_checkable
@@ -153,42 +109,23 @@ class CRDT(Protocol):
 
     clock: ScalarClock
 
-    def pack(self) -> bytes:
-        """
-        Pack the data and metadata into a bytes string.
-        :return: bytes (encoded self)
-        """
-        ...
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject=None) -> CRDT:
-        """
-        Unpack the data bytes string into an instance.
-        :param data: bytes
-        :param inject: optional data to inject during unpacking
-        :return: instance of self
-        """
-        ...
-
-    def read(self, /, *, inject: dict = None) -> Any:
+    def read(self) -> Any:
         """
         Return the eventually consistent data view.
-        :param inject: optional data to inject during unpacking
         :return: Any
         """
         ...
 
-    def update(self, state_update: Update, /, *, inject: dict = None) -> CRDT:
+    def update(self, state_update: Update) -> CRDT:
         """
         Apply an update. Should call self.invoke_listeners after validating the state_update.
         :param state_update: update to apply
-        :param inject: optional data to inject during unpacking
         :return: self (monad)
         """
         ...
 
     def checksums(
-        self, /, *, from_time_stamp: Any = None, until_time_stamp: Any = None
+        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
     ) -> tuple[Any]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
@@ -202,8 +139,8 @@ class CRDT(Protocol):
         self,
         /,
         *,
-        from_time_stamp: Any = None,
-        until_time_stamp: Any = None,
+        from_time_stamp: float = None,
+        until_time_stamp: float = None,
     ) -> tuple[Update]:
         """
         Returns a concise history of Updates that will converge to the underlying data. Useful for resynchronization by
@@ -270,8 +207,8 @@ def get_merkle_tree(crdt: CRDT) -> list[bytes | list[bytes] | dict[bytes, bytes]
     :return: list[bytes | list[bytes] | dict[bytes, bytes
     """
     history = crdt.history()
-    leaves = [update.pack() for update in history]
-    leaf_ids = [sha256(leaf).digest() for leaf in leaves]
+    leaves = [update for update in history]
+    leaf_ids = [leaf.sha256() for leaf in leaves]
     history = {leaf_id: leaf for leaf_id, leaf in zip(leaf_ids, leaves)}
     leaf_ids.sort()
     root = sha256(b"".join(leaf_ids)).digest()

@@ -25,14 +25,25 @@ class Cabinet(Hardware):
         name: str,
         model: str,
         number: int,
-        servers: List[Server],
-        chassis: List[Chassis],
-        switches: List[Switch],
+        servers: Optional[List[Server]],
+        chassis: Optional[List[Chassis]],
+        switches: Optional[List[Switch]],
     ):
         super().__init__(serial_number, name, model, number)
         self.servers = ComputerList[Server](servers)
         self.chassis = HardwareList[Chassis](chassis)
         self.switches = NetworkList[Switch](switches)
+
+    def __copy__(self):
+        return Cabinet(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            list(iter(self.servers)),
+            list(iter(self.chassis)),
+            list(iter(self.switches)),
+        )
 
     def pack(self) -> bytes:
         return pack(
@@ -63,11 +74,30 @@ class DataCenter:
     The key is the row number, the value is a list of cabinets
     """
 
-    def __init__(self, name: str, number: int):
-        self._log = logging.getLogger(__name__)
+    def __init__(
+        self,
+        name: str,
+        number: int,
+        rows: Dict[int, List[Cabinet]] = None,
+        items: LastWriterWinsMap = None,
+        inject=None,
+    ):
+        """
+        Initialize a data center
+        :param name: unique name
+        :param number: unique number referring to potential AZ
+        :param rows: optional dictionary of rows (number, list of cabinets)
+        :param items: optional injectable LastWriterWinsMap
+        :param inject: optional dict of injectable data for unpacking
+        """
+        self.inject = {**globals()} if not inject else {**globals(), **inject}
+        self.log = logging.getLogger(__name__)
         self.name = name
         self.number = number
-        self.rows = LastWriterWinsMap()
+        self.rows = LastWriterWinsMap(items)
+        if rows:
+            for k, v in rows.items():
+                self.rows.set(k, v, hash(k))
 
     def clear(self) -> None:
         self.rows = LastWriterWinsMap()
@@ -75,69 +105,69 @@ class DataCenter:
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:
         result = {}
-        for key, v in self.rows.read():
-            result[key] = v.value
+        for k, v in self.rows.read(inject=self.inject):
+            result[k] = list(iter(v))
         return result
 
     @instrument_class_function(name="has_key", level=logging.DEBUG)
     def has_key(self, k: int) -> bool:
-        for key, _ in self.rows.read():
+        for key, _ in self.rows.read(inject=self.inject):
             if key == k:
                 return True
         return False
 
     def update(self, key: int, value: List[Cabinet]) -> None:
-        self.rows.set(key, value, key)
+        self.rows.set(key, value, hash(key))
 
     def keys(self) -> List[int]:
-        return [k for k, _ in self.rows.read()]
+        return [k for k, _ in self.rows.read(inject=self.inject)]
 
     def values(self) -> List[List[Cabinet]]:
-        return [v for _, v in self.rows.read()]
+        return [v for _, v in self.rows.read(inject=self.inject)]
 
     def items(self) -> List[Tuple[int, List[Cabinet]]]:
-        return [(k, v) for k, v in self.rows.read()]
+        return [(k, v) for k, v in self.rows.read(inject=self.inject)]
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
     def pop(self, key: int) -> List[Cabinet]:
-        for k, v in self.rows.read():
+        for k, v in self.rows.read(inject=self.inject):
             if k == key:
                 self.rows.unset(key, key)
                 return v.value
         raise KeyError(f"Key {key} not found")
 
     def __eq__(self, other: DataCenter) -> bool:
-        return self.name == other.name and self.number == other.number
+        return self.name == other.name
 
     def __ne__(self, other: DataCenter) -> bool:
         return not self == other
 
     def __setitem__(self, key: int, item: List[Cabinet]) -> None:
-        self.rows.set(key, item, key)
+        self.rows.set(key, item, hash(key))
 
     @instrument_class_function(name="getitem", level=logging.DEBUG)
     def __getitem__(self, key):
-        for k, v in self.rows.read():
+        for k, v in self.rows.read(inject=self.inject):
             if k == key:
                 return v.value
         raise KeyError(f"Key {key} not found")
 
     @instrument_class_function(name="delitem", level=logging.DEBUG)
     def __delitem__(self, key):
-        for k, v in self.rows.read():
+        for k, v in self.rows.read(inject=self.inject):
             if k == key:
-                self.rows.unset(key, key)
+                self.rows.unset(key, hash(key))
                 return
         raise KeyError(f"Key {key} not found")
 
     def __repr__(self) -> str:
-        return f"DataCenter({self.name}, {self.number})"
+        return f"DataCenter({self.number}, {self.name}))"
 
     def __len__(self) -> int:
-        return len(self.rows.read())
+        return len(self.rows.read(inject=self.inject))
 
     def __contains__(self, cabinet: Cabinet) -> bool:
-        for _, v in self.rows.read():
+        for _, v in self.rows.read(inject=self.inject):
             if cabinet in v:
                 return True
         return False

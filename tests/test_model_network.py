@@ -5,18 +5,14 @@ from horao.models import (
     NIC,
     Cabinet,
     DataCenter,
+    DataCenterNetwork,
     DeviceStatus,
     LinkLayer,
     Port,
     Server,
     Switch,
-    DataCenterNetwork,
 )
-from horao.models.network import (
-    NetworkTopology,
-    NetworkType,
-    SwitchType,
-)
+from horao.models.network import NetworkTopology, NetworkType, SwitchType
 
 os.environ["ENVIRONMENT"] = "development"
 
@@ -139,15 +135,12 @@ def test_link_server_to_switch_ports_up_unlink_downs():
     ]
     server_nic = next(iter(server.nics), None)
     assert server_nic is not None
-    server_nic_port = next(iter(server_nic.ports), None)
-    assert server_nic_port is not None
+    snp = next(iter(server_nic.ports), None)
+    assert snp is not None
     fetched_server_nic = dc.fetch_server_nic(0, 0, 0, 0, None)
     assert fetched_server_nic.ports is not None
     fetched_server_nic_port = next(iter(fetched_server_nic.ports))
-    assert (
-        fetched_server_nic_port is not None
-        and fetched_server_nic_port == server_nic_port
-    )
+    assert fetched_server_nic_port is not None and fetched_server_nic_port == snp
     dcn.link(fetched_server_nic, leaf_left)
     assert server_nic_port.status == DeviceStatus.Up
     assert leaf_left.ports[0].status == DeviceStatus.Up

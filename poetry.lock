@@ -709,17 +709,6 @@ files = [
 ]
 
 [[package]]
-name = "packify"
-version = "0.2.2"
-description = ""
-optional = false
-python-versions = ">=3.9"
-files = [
-    {file = "packify-0.2.2-py3-none-any.whl", hash = "sha256:82ac1aac720400556967539dccdee6a67bbd32de55cd66a850d62d07c876ffa1"},
-    {file = "packify-0.2.2.tar.gz", hash = "sha256:e245c8c0526ea4e91809656cd8f2ed034fa66fb84ab0d7a7f7fc5460ee442d57"},
-]
-
-[[package]]
 name = "pathspec"
 version = "0.12.1"
 description = "Utility library for gitignore style pattern matching of file paths."
@@ -1266,4 +1255,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a5427fa76a9b90c3d82e55e932ae0915c50fdb68eaf76433d7fc26a08e341941"
+content-hash = "c526d2661d6853b6a2a19cc1640fadf7a6c8d7ce3a9d6178d90dae135d152851"

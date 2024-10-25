@@ -8,11 +8,9 @@ Also, we assume that these data structures are not very prone to change, given t
 from __future__ import annotations
 
 from abc import ABC
-from typing import Optional, List, TypeVar
+from typing import List, Optional, TypeVar
 
-from packify import pack, unpack
-
-from horao.models.crdt import LastWriterWinsMap, CRDTList
+from horao.models.crdt import CRDTList, LastWriterWinsMap
 
 
 class Hardware(ABC):
@@ -21,6 +19,9 @@ class Hardware(ABC):
         self.name = name
         self.model = model
         self.number = number
+
+    def __copy__(self):
+        return Hardware(self.serial_number, self.name, self.model, self.number)
 
     def __eq__(self, other: Hardware) -> bool:
         """
@@ -93,6 +94,16 @@ class RAM(Hardware):
         self.size_gb = size_gb
         self.speed_mhz = speed_mhz
 
+    def __copy__(self):
+        return RAM(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            self.size_gb,
+            self.speed_mhz,
+        )
+
     def pack(self) -> bytes:
         return pack(
             [
@@ -127,6 +138,17 @@ class CPU(Hardware):
         self.clock_speed = clock_speed
         self.cores = cores
         self.features = features
+
+    def __copy__(self):
+        return CPU(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            self.clock_speed,
+            self.cores,
+            self.features,
+        )
 
     def pack(self) -> bytes:
         return pack(
@@ -166,6 +188,17 @@ class Accelerator(Hardware):
         self.chip = chip
         self.clock_speed = clock_speed
 
+    def __copy__(self):
+        return Accelerator(
+            self.serial_number,
+            self.name,
+            self.model,
+            self.number,
+            self.memory_gb,
+            self.chip,
+            self.clock_speed,
+        )
+
     def pack(self) -> bytes:
         return pack(
             [
@@ -199,6 +232,11 @@ class Disk(Hardware):
     ):
         super().__init__(serial_number, name, model, number)
         self.size_gb = size_gb
+
+    def __copy__(self):
+        return Disk(
+            self.serial_number, self.name, self.model, self.number, self.size_gb
+        )
 
     def pack(self) -> bytes:
         return pack(
