@@ -1,4 +1,5 @@
-import inspect
+# -*- coding: utf-8 -*-#
+"""Decorator functions for the application model implementation."""
 import logging
 from functools import wraps
 

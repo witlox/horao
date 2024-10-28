@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-#
+"""Conflict-free Replicated Data Types (CRDTs) for eventual consistency."""
 from __future__ import annotations
 
 import logging

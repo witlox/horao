@@ -58,7 +58,6 @@ class DataCenter:
         number: int,
         rows: Dict[int, List[Cabinet]] = None,
         items: LastWriterWinsMap = None,
-        inject=None,
     ):
         """
         Initialize a data center
@@ -66,9 +65,7 @@ class DataCenter:
         :param number: unique number referring to potential AZ
         :param rows: optional dictionary of rows (number, list of cabinets)
         :param items: optional injectable LastWriterWinsMap
-        :param inject: optional dict of injectable data for unpacking
         """
-        self.inject = {**globals()} if not inject else {**globals(), **inject}
         self.log = logging.getLogger(__name__)
         self.name = name
         self.number = number
@@ -124,14 +121,14 @@ class DataCenter:
         self.rows.set(key, item, hash(key))
 
     @instrument_class_function(name="getitem", level=logging.DEBUG)
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> List[Cabinet]:
         for k, v in self.rows.read().items():
             if k == key:
                 return v.value
         raise KeyError(f"Key {key} not found")
 
     @instrument_class_function(name="delitem", level=logging.DEBUG)
-    def __delitem__(self, key):
+    def __delitem__(self, key) -> None:
         for k, v in self.rows.read().items():
             if k == key:
                 self.rows.unset(key, hash(key))
@@ -252,19 +249,36 @@ class DataCenter:
 
 
 class DataCenterNetwork:
+    """Data Center Network model"""
+
     def __init__(
         self,
         name: str,
         network_type: NetworkType,
-    ):
+    ) -> None:
+        """
+        Initialize a data center network
+        :param name: network name
+        :param network_type: type of network
+        """
         self.graph = nx.Graph()
         self.name = name
         self.network_type = network_type
 
     def add(self, network_device: NetworkDevice) -> None:
+        """
+        Add a network device to the network
+        :param network_device: device to add
+        :return: None
+        """
         self.graph.add_node(network_device)
 
-    def add_multiple(self, network_devices: list[NetworkDevice]) -> None:
+    def add_multiple(self, network_devices: List[NetworkDevice]) -> None:
+        """
+        Add multiple network devices to the network at once
+        :param network_devices: list of network devices
+        :return: None
+        """
         for network_device in network_devices:
             self.add(network_device)
 
@@ -378,6 +392,10 @@ class DataCenterNetwork:
                     )
 
     def get_topology(self) -> NetworkTopology:
+        """
+        Determine the topology of the network
+        :return: topology
+        """
         if nx.is_tree(self.graph):
             return NetworkTopology.Tree
         return NetworkTopology.Undefined

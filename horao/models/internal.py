@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-#
+"""Internal classes for the CRDT implementation."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
