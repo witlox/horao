@@ -35,10 +35,10 @@ class SecurityEngineer(Permissions):
         return self.name
 
 
-class Student(Permissions):
+class TenantOwner(Permissions):
     def __init__(self):
         super().__init__(
-            "Student",
+            "TenantOwner",
             {Namespace.System: Permission.Read},
         )
 
@@ -46,21 +46,10 @@ class Student(Permissions):
         return self.name
 
 
-class Researcher(Permissions):
+class Delegate(Permissions):
     def __init__(self):
         super().__init__(
-            "Researcher",
-            {Namespace.System: Permission.Read},
-        )
-
-    def __str__(self):
-        return self.name
-
-
-class PrincipalInvestigator(Permissions):
-    def __init__(self):
-        super().__init__(
-            "Principal Investigator",
+            "Delegate",
             {Namespace.System: Permission.Read},
         )
 

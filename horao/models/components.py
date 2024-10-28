@@ -93,7 +93,7 @@ class CPU(Hardware):
         name: str,
         model: str,
         number: int,
-        clock_speed: int,
+        clock_speed: float,
         cores: int,
         features: Optional[str],
     ):

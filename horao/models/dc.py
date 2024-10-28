@@ -155,6 +155,7 @@ class DataCenter:
         return hash((self.name, self.number))
 
     @staticmethod
+    @instrument_class_function(name="move_server", level=logging.DEBUG)
     def move_server(server: Server, from_cabinet: Cabinet, to_cabinet: Cabinet) -> None:
         """
         Move a server from one cabinet to another
@@ -170,6 +171,7 @@ class DataCenter:
         to_cabinet.servers.append(server)
 
     @staticmethod
+    @instrument_class_function(name="move_chassis", level=logging.DEBUG)
     def move_chassis_server(
         server: Server, from_chassis: Chassis, to_chassis: Chassis
     ) -> None:
@@ -187,6 +189,7 @@ class DataCenter:
         to_chassis.servers.append(server)
 
     @staticmethod
+    @instrument_class_function(name="move_blade", level=logging.DEBUG)
     def move_blade(blade: Blade, from_chassis: Chassis, to_chassis: Chassis) -> None:
         """
         Move a server from one chassis to another
@@ -202,6 +205,7 @@ class DataCenter:
         to_chassis.blades.append(blade)
 
     @staticmethod
+    @instrument_class_function(name="swap_disk", level=logging.DEBUG)
     def swap_disk(
         server: Server, old_disk: Optional[Disk], new_disk: Optional[Disk]
     ) -> None:
@@ -255,16 +259,20 @@ class DataCenterNetwork:
         self,
         name: str,
         network_type: NetworkType,
+        high_speed_network: Optional[bool] = False,
     ) -> None:
         """
         Initialize a data center network
         :param name: network name
         :param network_type: type of network
+        :param high_speed_network: this is a high speed, low latency network
         """
         self.graph = nx.Graph()
         self.name = name
         self.network_type = network_type
+        self.hsn = high_speed_network
 
+    @instrument_class_function(name="add", level=logging.DEBUG)
     def add(self, network_device: NetworkDevice) -> None:
         """
         Add a network device to the network
@@ -282,6 +290,7 @@ class DataCenterNetwork:
         for network_device in network_devices:
             self.add(network_device)
 
+    @instrument_class_function(name="link", level=logging.DEBUG)
     def link(self, left: NetworkDevice, right: NetworkDevice) -> None:
         """
         Link two network devices, if they are switches, they are connected via uplink ports, if they are routers or
@@ -318,6 +327,7 @@ class DataCenterNetwork:
             )
         link_free_ports(left_port, right_port)
 
+    @instrument_class_function(name="unlink", level=logging.DEBUG)
     def unlink(self, left: NetworkDevice, right: NetworkDevice) -> None:
         self.graph.remove_edge(left, right)
         if isinstance(left, Switch) and left.uplink_ports and any(left.uplink_ports):
@@ -334,6 +344,7 @@ class DataCenterNetwork:
         right_port.connected = False
         right_port.status = DeviceStatus.Down
 
+    @instrument_class_function(name="toggle", level=logging.DEBUG)
     def toggle(self, device: NetworkDevice) -> None:
         n: NetworkDevice
         for n in self.graph.neighbors(device):
@@ -394,8 +405,14 @@ class DataCenterNetwork:
     def get_topology(self) -> NetworkTopology:
         """
         Determine the topology of the network
-        :return: topology
+        :return: topology (currently tree or undefined)
         """
         if nx.is_tree(self.graph):
             return NetworkTopology.Tree
         return NetworkTopology.Undefined
+
+    def nodes(self) -> List[NetworkDevice]:
+        return list(self.graph.nodes)
+
+    def is_hsn(self) -> bool:
+        return self.hsn

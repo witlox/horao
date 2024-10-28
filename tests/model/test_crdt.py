@@ -1,4 +1,3 @@
-from datetime import datetime
 from itertools import permutations
 
 from horao.models.crdt import (
@@ -175,54 +174,54 @@ def test_or_set_read_returns_add_biased_set_difference():
 
 
 def test_or_set_observe_and_remove_return_state_update():
-    orset = ObservedRemovedSet()
-    update = orset.observe(1)
+    or_set = ObservedRemovedSet()
+    update = or_set.observe(1)
     assert isinstance(update, Update)
-    update = orset.remove(1)
+    update = or_set.remove(1)
     assert isinstance(update, Update)
 
 
 def test_or_set_history_returns_tuple_of_state_update():
-    orset = ObservedRemovedSet()
-    orset.observe(1)
-    orset.observe(2)
-    history = orset.history()
+    or_set = ObservedRemovedSet()
+    or_set.observe(1)
+    or_set.observe(2)
+    history = or_set.history()
     assert type(history) is tuple
     for update in history:
         assert type(update) is Update
 
 
 def test_or_set_read_returns_set_with_correct_values():
-    orset = ObservedRemovedSet()
-    view1 = orset.read()
+    or_set = ObservedRemovedSet()
+    view1 = or_set.read()
     assert type(view1) is set
     assert len(view1) == 0
-    orset.observe(1)
-    view2 = orset.read()
+    or_set.observe(1)
+    view2 = or_set.read()
     assert len(view2) == 1
     assert [*view2][0] == 1
-    orset.observe(2)
-    view3 = orset.read()
+    or_set.observe(2)
+    view3 = or_set.read()
     assert len(view3) == 2
     assert 1 in view3
     assert 2 in view3
-    orset.remove(1)
-    view4 = orset.read()
+    or_set.remove(1)
+    view4 = or_set.read()
     assert len(view4) == 1
     assert 2 in view4
 
 
 def test_or_set_observe_and_remove_change_view():
-    orset = ObservedRemovedSet()
-    view1 = orset.read()
-    orset.observe(1)
-    view2 = orset.read()
-    orset.observe(2)
-    view3 = orset.read()
-    orset.remove(1)
-    view4 = orset.read()
-    orset.remove(5)
-    view5 = orset.read()
+    or_set = ObservedRemovedSet()
+    view1 = or_set.read()
+    or_set.observe(1)
+    view2 = or_set.read()
+    or_set.observe(2)
+    view3 = or_set.read()
+    or_set.remove(1)
+    view4 = or_set.read()
+    or_set.remove(5)
+    view5 = or_set.read()
     assert view1 not in (view2, view3, view4, view5)
     assert view2 not in (view1, view3, view4, view5)
     assert view3 not in (view1, view2, view4, view5)
@@ -231,162 +230,161 @@ def test_or_set_observe_and_remove_change_view():
 
 
 def test_or_set_observe_and_remove_same_member_does_not_change_view():
-    orset = ObservedRemovedSet()
-    orset.observe(1)
-    view1 = orset.read()
-    orset.observe(1)
-    view2 = orset.read()
+    or_set = ObservedRemovedSet()
+    or_set.observe(1)
+    view1 = or_set.read()
+    or_set.observe(1)
+    view2 = or_set.read()
     assert view1 == view2
-    orset.observe(2)
-    orset.remove(1)
-    view3 = orset.read()
-    orset.remove(1)
-    view4 = orset.read()
+    or_set.observe(2)
+    or_set.remove(1)
+    view3 = or_set.read()
+    or_set.remove(1)
+    view4 = or_set.read()
     assert view3 == view4
 
 
 def test_or_set_checksums_returns_tuple_of_int():
-    orset = ObservedRemovedSet()
-    checksum = orset.checksum()
+    or_set = ObservedRemovedSet()
+    checksum = or_set.checksum()
     assert type(checksum) is tuple
     for item in checksum:
         assert type(item) is int
 
 
 def test_or_set_checksums_change_after_update():
-    orset = ObservedRemovedSet()
-    checksums1 = orset.checksum()
-    orset.observe(1)
-    checksums2 = orset.checksum()
-    orset.remove(1)
-    checksums3 = orset.checksum()
+    or_set = ObservedRemovedSet()
+    checksums1 = or_set.checksum()
+    or_set.observe(1)
+    checksums2 = or_set.checksum()
+    or_set.remove(1)
+    checksums3 = or_set.checksum()
     assert checksums1 != checksums2
     assert checksums2 != checksums3
     assert checksums3 != checksums1
 
 
 def test_or_set_update_is_idempotent():
-    orset1 = ObservedRemovedSet()
-    orset2 = ObservedRemovedSet(clock=LogicalClock(0, orset1.clock.uuid))
-    update = orset1.observe(2)
-    view1 = orset1.read()
-    orset1.update(update)
-    assert orset1.read() == view1
-    orset2.update(update)
-    view2 = orset2.read()
-    orset2.update(update)
-    assert orset2.read() == view2 == view1
+    or_set = ObservedRemovedSet()
+    or_set = ObservedRemovedSet(clock=LogicalClock(0, or_set.clock.uuid))
+    update = or_set.observe(2)
+    view1 = or_set.read()
+    or_set.update(update)
+    assert or_set.read() == view1
+    or_set.update(update)
+    view2 = or_set.read()
+    or_set.update(update)
+    assert or_set.read() == view2 == view1
 
-    update = orset1.remove(2)
-    view1 = orset1.read()
-    orset1.update(update)
-    assert orset1.read() == view1
-    orset2.update(update)
-    view2 = orset2.read()
-    orset2.update(update)
-    assert orset2.read() == view2 == view1
+    update = or_set.remove(2)
+    view1 = or_set.read()
+    or_set.update(update)
+    assert or_set.read() == view1
+    or_set.update(update)
+    view2 = or_set.read()
+    or_set.update(update)
+    assert or_set.read() == view2 == view1
 
 
 def test_or_set_updates_from_history_converge():
-    orset1 = ObservedRemovedSet()
-    orset2 = ObservedRemovedSet(clock=LogicalClock(0, orset1.clock.uuid))
-    orset1.observe(1)
-    orset1.remove(2)
-    orset1.observe(3)
+    or_set1 = ObservedRemovedSet()
+    or_set2 = ObservedRemovedSet(clock=LogicalClock(0, or_set1.clock.uuid))
+    or_set1.observe(1)
+    or_set1.remove(2)
+    or_set1.observe(3)
 
-    for update in orset1.history():
-        orset2.update(update)
+    for update in or_set1.history():
+        or_set2.update(update)
 
-    assert orset1.read() == orset2.read()
-    assert orset1.checksum() == orset2.checksum()
+    assert or_set1.read() == or_set2.read()
+    assert or_set1.checksum() == or_set2.checksum()
 
-    histories = permutations(orset1.history())
+    histories = permutations(or_set1.history())
     for history in histories:
-        orset2 = ObservedRemovedSet(clock=LogicalClock(0, orset1.clock.uuid))
+        or_set2 = ObservedRemovedSet(clock=LogicalClock(0, or_set1.clock.uuid))
         for update in history:
-            orset2.update(update)
-        assert orset2.read() == orset1.read()
-        assert orset2.checksum() == orset1.checksum()
+            or_set2.update(update)
+        assert or_set2.read() == or_set1.read()
+        assert or_set2.checksum() == or_set1.checksum()
 
 
 def test_or_set_cache_is_set_upon_first_read():
-    orset = ObservedRemovedSet()
-    orset.observe(1)
-    assert orset.cache is None
-    orset.read()
-    assert orset.cache is not None
+    or_set = ObservedRemovedSet()
+    or_set.observe(1)
+    assert or_set.cache is None
+    or_set.read()
+    assert or_set.cache is not None
 
 
 def test_or_set_convergence_from_ts():
-    orset1 = ObservedRemovedSet()
-    orset2 = ObservedRemovedSet()
-    orset2.clock.uuid = orset1.clock.uuid
+    or_set1 = ObservedRemovedSet()
+    or_set2 = ObservedRemovedSet()
+    or_set2.clock.uuid = or_set1.clock.uuid
     for i in range(10):
-        update = orset1.observe(i)
-        orset2.update(update)
-    assert orset1.checksum() == orset2.checksum()
+        update = or_set1.observe(i)
+        or_set2.update(update)
+    assert or_set1.checksum() == or_set2.checksum()
     for i in range(5):
-        update = orset2.remove(i)
-        orset1.update(update)
-    assert orset1.checksum() == orset2.checksum()
+        update = or_set2.remove(i)
+        or_set1.update(update)
+    assert or_set1.checksum() == or_set2.checksum()
 
-    orset1.observe(69420)
-    orset1.observe(42096)
-    orset2.observe(23878)
+    or_set1.observe(303)
+    or_set1.observe(202)
+    or_set2.observe(101)
 
-    # not the most efficient algorithm, but it demonstrates the concept
     from_ts = 0
-    until_ts = orset1.clock.read()
+    until_ts = or_set1.clock.read()
     while (
-        orset1.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
-        != orset2.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
+        or_set1.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
+        != or_set2.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
         and until_ts > 0
     ):
         until_ts -= 1
     from_ts = until_ts
     assert from_ts > 0
 
-    for update in orset1.history(from_time_stamp=from_ts):
-        orset2.update(update)
-    for update in orset2.history(from_time_stamp=from_ts):
-        orset1.update(update)
+    for update in or_set1.history(from_time_stamp=from_ts):
+        or_set2.update(update)
+    for update in or_set2.history(from_time_stamp=from_ts):
+        or_set1.update(update)
 
-    assert orset1.checksum() == orset2.checksum()
+    assert or_set1.checksum() == or_set2.checksum()
 
-    orset2 = ObservedRemovedSet()
-    orset2.clock.uuid = orset1.clock.uuid
-    for update in orset1.history(until_time_stamp=0):
-        orset2.update(update)
-    assert orset1.checksum() != orset2.checksum()
+    or_set2 = ObservedRemovedSet()
+    or_set2.clock.uuid = or_set1.clock.uuid
+    for update in or_set1.history(until_time_stamp=0):
+        or_set2.update(update)
+    assert or_set1.checksum() != or_set2.checksum()
 
-    orset2 = ObservedRemovedSet()
-    orset2.clock.uuid = orset1.clock.uuid
-    for update in orset1.history(from_time_stamp=99):
-        orset2.update(update)
-    assert orset1.checksum() != orset2.checksum()
+    or_set2 = ObservedRemovedSet()
+    or_set2.clock.uuid = or_set1.clock.uuid
+    for update in or_set1.history(from_time_stamp=99):
+        or_set2.update(update)
+    assert or_set1.checksum() != or_set2.checksum()
 
 
 def test_or_set_event_listeners_e2e():
-    orset = ObservedRemovedSet()
+    or_set = ObservedRemovedSet()
     logs = []
 
     def add_log(update: Update):
         logs.append(update)
 
     assert len(logs) == 0
-    orset.observe("item")
+    or_set.observe("item")
     assert len(logs) == 0
-    orset.remove("item")
+    or_set.remove("item")
     assert len(logs) == 0
-    orset.add_listener(add_log)
-    orset.observe("item")
+    or_set.add_listener(add_log)
+    or_set.observe("item")
     assert len(logs) == 1
-    orset.remove("item")
+    or_set.remove("item")
     assert len(logs) == 2
-    orset.remove_listener(add_log)
-    orset.observe("item")
+    or_set.remove_listener(add_log)
+    or_set.observe("item")
     assert len(logs) == 2
-    orset.remove("item")
+    or_set.remove("item")
     assert len(logs) == 2
 
 

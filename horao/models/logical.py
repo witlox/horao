@@ -2,30 +2,80 @@
 """Logical High-Level Models used by HORAO"""
 from __future__ import annotations
 
+import logging
+import os
 from abc import ABC
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple, Optional
 
 from black import datetime
 
-from horao.models import DataCenter, DataCenterNetwork
+from horao.models import DataCenter, DataCenterNetwork, NetworkType
 from horao.models.components import Hardware
-from horao.models.composite import Computer
+from horao.models.composite import Server, Blade, Computer
+from horao.models.decorators import instrument_class_function
+from horao.models.scheduler import (
+    ResourceDefinition,
+    Compute,
+    Storage,
+    StorageType,
+    StorageClass,
+)
 from horao.rbac.roles import (
     NetworkEngineer,
-    PrincipalInvestigator,
-    Researcher,
+    Delegate,
+    TenantOwner,
     SecurityEngineer,
-    Student,
     SystemEngineer,
 )
+
+
+@dataclass
+class Tenant:
+    name: str
+    owner: TenantOwner
+    delegates: List[Delegate] = field(default_factory=list)
+    shares: int = int(os.getenv("SHARES", 100))
+
+
+@dataclass
+class Constraint:
+    target: Tenant
+    compute_limits: List[Compute]
+    storage_limits: List[Storage]
+
+    def total_block_storage_limit(self) -> int:
+        return sum(
+            [
+                s.amount
+                for s in self.storage_limits
+                if s.storage_type == StorageType.Block
+            ]
+        )
+
+    def total_object_storage_limit(self) -> int:
+        return sum(
+            [
+                s.amount
+                for s in self.storage_limits
+                if s.storage_type == StorageType.Object
+            ]
+        )
+
+    def total_cpu_compute_limit(self) -> int:
+        return sum([c.cpu * c.amount for c in self.compute_limits])
+
+    def total_ram_compute_limit(self) -> int:
+        return sum([c.ram * c.amount for c in self.compute_limits])
+
+    def total_accelerator_compute_limit(self) -> int:
+        return sum([c.amount for c in self.compute_limits if c.accelerator])
 
 
 class Claim(ABC):
     """Base Class for Claims"""
 
-    def __init__(self, name: str, start: datetime, end: datetime):
+    def __init__(self, name: str, start: Optional[datetime], end: Optional[datetime]):
         self.name = name
         self.start = start
         self.end = end
@@ -56,7 +106,7 @@ class Claim(ABC):
 
 
 class Maintenance(Claim):
-    """Represents a maintenance event in the data center."""
+    """Represents a maintenance event in (a) data center(s)."""
 
     def __init__(
         self,
@@ -95,102 +145,23 @@ class Maintenance(Claim):
         )
 
 
-@dataclass
-class ResourceDefinition:
-    """Base class for resource definitions."""
-
-    amount: int = field(default=1)
-
-
-class Compute(ResourceDefinition):
-    """Represents a compute resource."""
-
-    def __init__(
-        self, cpu: int, ram: int, accelerator: bool, amount: int = None
-    ) -> None:
-        """
-        Initialize the compute resource.
-        :param cpu: amount of CPUs per node
-        :param ram: amount of RAM in GB per node
-        :param accelerator: requires an accelerator
-        :param amount: total amount of nodes
-        """
-        super().__init__(amount)
-        self.cpu = cpu
-        self.ram = ram
-        self.accelerator = accelerator
-
-    def __eq__(self, other: Compute) -> bool:
-        return (
-            super().__eq__(other)
-            and self.cpu == other.cpu
-            and self.ram == other.ram
-            and self.accelerator == other.accelerator
-        )
-
-    def __hash__(self):
-        return hash((self.amount, self.cpu, self.ram, self.accelerator))
-
-
-class StorageClass(Enum):
-    """Available storage classes"""
-
-    Hot = auto()
-    Warm = auto()
-    Cold = auto()
-
-
-class StorageType(Enum):
-    """Available storage types"""
-
-    Block = auto()
-    Object = auto()
-
-
-class Storage(ResourceDefinition):
-    """Represents a storage resource."""
-
-    def __init__(
-        self, capacity: int, storage_type: StorageType, storage_class: StorageClass
-    ) -> None:
-        """
-        Initialize the storage resource.
-        :param capacity: total capacity in TB
-        :param storage_type: type of storage
-        :param storage_class: class of storage
-        """
-        super().__init__(capacity)
-        self.storage_type = storage_type
-        self.storage_class = storage_class
-
-    def __eq__(self, other: Storage) -> bool:
-        return (
-            super().__eq__(other)
-            and self.storage_type == other.storage_type
-            and self.storage_class == other.storage_class
-        )
-
-    def __hash__(self):
-        return hash((self.amount, self.storage_type, self.storage_class))
-
-
 class Reservation(Claim):
     """Represents a logical reservation of resources."""
 
     def __init__(
         self,
         name: str,
-        start: datetime,
-        end: datetime,
-        end_user: PrincipalInvestigator | Researcher | Student,
+        start: Optional[datetime],
+        end: Optional[datetime],
+        end_user: Delegate | TenantOwner,
         resources: List[ResourceDefinition],
         hsn_only: bool = True,
     ):
         """
         Initialize the reservation.
         :param name: logical name
-        :param start: start date
-        :param end: end date
+        :param start: start date, if empty find the best fit
+        :param end: end date, if empty assume forever
         :param end_user: who is making the reservation for the resources
         :param resources: actual resources being reserved
         :param hsn_only: resources can only be used if directly connected to the high speed network
@@ -221,6 +192,8 @@ class LogicalInfrastructure:
     infrastructure: Dict[DataCenter, List[DataCenterNetwork]] = field(
         default_factory=dict
     )
+    constraints: Dict[Tenant, Constraint] = field(default_factory=dict)
+    claims: List[Claim] = field(default_factory=list)
 
     def clear(self) -> None:
         self.infrastructure.clear()
@@ -277,3 +250,79 @@ class LogicalInfrastructure:
 
     def __hash__(self) -> int:
         return hash(self.infrastructure)
+
+    @instrument_class_function(name="total_compute", level=logging.DEBUG)
+    def total_compute(self, hsn_only: bool = False) -> List[Compute]:
+        """
+        Calculate the total compute resources in the infrastructure.
+        We currently assume that if a compute resource has disks, it is counted towards storage too.
+        We also assume that there is no mixing of compute modules within a node within a blade.
+        :param hsn_only: only count resources that are directly connected to the high speed network
+        :return: list of compute resources
+        """
+        compute = []
+        for dc, networks in self.infrastructure.items():
+            data_networks = [n for n in networks if n.network_type == NetworkType.Data]
+            if hsn_only:
+                data_networks = [n for n in data_networks if n.hsn]
+            for network in data_networks:
+                for node in network.nodes():
+                    if isinstance(node, Server):
+                        compute.append(
+                            Compute(
+                                sum([n.cores for n in node.cpus]),
+                                sum([r.size_gb for r in node.rams]),
+                                len(node.accelerators) > 0,
+                                1,
+                            )
+                        )
+                    if isinstance(node, Blade):
+                        for n in node.nodes():
+                            compute.append(
+                                Compute(
+                                    sum([c.cores for c in n.cpus]),
+                                    sum([r.size_gb for r in n.rams]),
+                                    len(n.accelerators) > 0,
+                                    len(n.modules),
+                                )
+                            )
+        return compute
+
+    @instrument_class_function(name="total_storage", level=logging.DEBUG)
+    def total_storage(self, hsn_only: bool = False) -> List[Storage]:
+        """
+        Calculate the total storage resources in the infrastructure.
+        We currently assume that if a compute resource has disks, it is counted towards storage too.
+        :param hsn_only: only count resources that are directly connected to the high speed network
+        :return: list of compute resources
+        """
+        storage = []
+        for dc, networks in self.infrastructure.items():
+            data_networks = [n for n in networks if n.network_type == NetworkType.Data]
+            if hsn_only:
+                data_networks = [n for n in data_networks if n.hsn]
+            for network in data_networks:
+                for node in network.nodes():
+                    if isinstance(node, Server):
+                        storage.append(
+                            Storage(
+                                sum([d.size_gb for d in node.disks]),
+                                StorageType.Block,
+                                StorageClass.Hot,
+                            )
+                        )
+                    if isinstance(node, Blade):
+                        for n in node.nodes():
+                            storage.append(
+                                Storage(
+                                    sum(
+                                        [
+                                            sum([d.size_gb for d in m.disks])
+                                            for m in n.modules
+                                        ]
+                                    ),
+                                    StorageType.Block,
+                                    StorageClass.Hot,
+                                )
+                            )
+        return storage
