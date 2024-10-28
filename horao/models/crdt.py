@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import (
     Any,
     Callable,
-    Dict,
     Generic,
     Hashable,
     Iterable,
@@ -18,35 +17,33 @@ from typing import (
 from horao.models.decorators import instrument_class_function
 from horao.models.internal import (
     CRDT,
-    ScalarClock,
+    LogicalClock,
     Update,
     UpdateType,
     get_merkle_tree,
     resolve_merkle_tree,
 )
 
-H = TypeVar("H", bound=Hashable)
-
 
 @dataclass
-class ObservedRemovedSet[O](CRDT):
+class ObservedRemovedSet(CRDT):
     """
     Observed Removed Set (ORSet) CRDT. Comprised of two Sets with a read method that removes the removed set members
     from the observed set. Add-biased.
     """
 
-    observed: set[O] = field(default_factory=set)
-    observed_metadata: dict[O, Update] = field(default_factory=dict)
-    removed: set[O] = field(default_factory=set)
-    removed_metadata: dict[O, Update] = field(default_factory=dict)
-    clock: ScalarClock = field(default_factory=ScalarClock)
+    observed: set[Hashable] = field(default_factory=set)
+    observed_metadata: dict[Hashable, Update] = field(default_factory=dict)
+    removed: set[Hashable] = field(default_factory=set)
+    removed_metadata: dict[Hashable, Update] = field(default_factory=dict)
+    clock: LogicalClock = field(default_factory=LogicalClock)
     cache: Optional[tuple] = field(default=None)
     listeners: list[Callable] = field(default_factory=list)
 
-    def read(self) -> set[O]:
+    def read(self) -> set[Hashable]:
         """
         Return the eventually consistent data view.
-        :return: set[O]
+        :return: set of values
         """
         if self.cache is not None:
             if self.cache[0] == self.clock.read():
@@ -81,7 +78,7 @@ class ObservedRemovedSet[O](CRDT):
                 if state_update.data in self.observed_metadata:
                     old_time_stamp = self.observed_metadata[state_update.data]
                 else:
-                    old_time_stamp = self.clock.default_time_stamp
+                    old_time_stamp = self.clock.time_stamp
                 if self.clock.is_later(state_update.time_stamp, old_time_stamp):
                     self.observed_metadata[state_update.data] = state_update
 
@@ -103,7 +100,7 @@ class ObservedRemovedSet[O](CRDT):
                 if state_update.data in self.removed_metadata:
                     old_time_stamp = self.removed_metadata[state_update.data]
                 else:
-                    old_time_stamp = self.clock.default_time_stamp
+                    old_time_stamp = self.clock.time_stamp
                 if self.clock.is_later(state_update.time_stamp, old_time_stamp):
                     self.removed_metadata[state_update.data] = state_update
 
@@ -113,13 +110,13 @@ class ObservedRemovedSet[O](CRDT):
 
                 self.cache = None
 
-        self.clock.update(state_update.time_stamp)
+        self.clock.update()
 
         return self
 
-    def checksums(
+    def checksum(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[int, int, int, int]:
+    ) -> tuple[int, int]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: start time_stamp
@@ -127,8 +124,6 @@ class ObservedRemovedSet[O](CRDT):
         :return: tuple[int]
         """
         observed, removed = 0, 0
-        total_observed_crc32 = 0
-        total_removed_crc32 = 0
         for member, update in self.observed_metadata.items():
             if from_time_stamp is not None:
                 if self.clock.is_later(from_time_stamp, update.time_stamp):
@@ -137,7 +132,6 @@ class ObservedRemovedSet[O](CRDT):
                 if self.clock.is_later(update.time_stamp, until_time_stamp):
                     continue
             observed += 1
-            total_observed_crc32 += crc32(member)
 
         for member, update in self.removed_metadata.items():
             if from_time_stamp is not None:
@@ -147,14 +141,8 @@ class ObservedRemovedSet[O](CRDT):
                 if self.clock.is_later(update.time_stamp, until_time_stamp):
                     continue
             removed += 1
-            total_removed_crc32 += crc32(member)
 
-        return (
-            observed,
-            removed,
-            total_observed_crc32 % 2**32,
-            total_removed_crc32 % 2**32,
-        )
+        return observed, removed
 
     def history(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
@@ -184,6 +172,7 @@ class ObservedRemovedSet[O](CRDT):
                     data=observed,
                     update_type=UpdateType.Observed,
                     writer=None,
+                    name=None,
                 )
             )
 
@@ -203,6 +192,7 @@ class ObservedRemovedSet[O](CRDT):
                     data=removed,
                     update_type=UpdateType.Removed,
                     writer=None,
+                    name=None,
                 )
             )
 
@@ -242,6 +232,7 @@ class ObservedRemovedSet[O](CRDT):
             data=member,
             update_type=UpdateType.Observed,
             writer=None,
+            name=None,
         )
 
         self.update(state_update)
@@ -260,6 +251,7 @@ class ObservedRemovedSet[O](CRDT):
             data=member,
             update_type=UpdateType.Removed,
             writer=None,
+            name=None,
         )
 
         self.update(state_update)
@@ -297,7 +289,7 @@ class LastWriterWinsRegister(CRDT):
 
     name: Hashable
     value: Hashable
-    clock: ScalarClock
+    clock: LogicalClock
     last_update: Any
     last_writer: Hashable
     listeners: list[Callable]
@@ -306,7 +298,7 @@ class LastWriterWinsRegister(CRDT):
         self,
         name: Hashable,
         value: Hashable = None,
-        clock: ScalarClock = None,
+        clock: LogicalClock = None,
         last_update: Any = None,
         last_writer: Hashable = None,
         listeners: list[Callable] = None,
@@ -322,9 +314,9 @@ class LastWriterWinsRegister(CRDT):
         :raises TypeError: name, value, clock, or last_writer
         """
         if clock is None:
-            clock = ScalarClock()
+            clock = LogicalClock()
         if last_update is None:
-            last_update = clock.default_time_stamp
+            last_update = clock.time_stamp
         if listeners is None:
             listeners = []
 
@@ -369,31 +361,31 @@ class LastWriterWinsRegister(CRDT):
             self.last_writer = state_update.writer
             self.value = state_update.data
         elif self.clock.are_concurrent(state_update.time_stamp, self.last_update):
-            if (state_update.writer > self.last_writer) or (
-                state_update.writer == self.last_writer
-                and self.compare_values(state_update.data, self.value)
+            if (
+                self.last_writer is None
+                or state_update.writer > self.last_writer
+                or (
+                    state_update.writer == self.last_writer
+                    and self.compare_values(state_update.data, self.value)
+                )
             ):
                 self.last_writer = state_update.writer
                 self.value = state_update.data
 
-        self.clock.update(state_update.time_stamp)
+        self.clock.update()
 
         return self
 
-    def checksums(
+    def checksum(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[int, int, int]:
+    ) -> tuple[int]:
         """
-        Returns any checksums for the underlying data to detect de-synchronization due to message failure.
+        Returns the hash for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: start time_stamp
         :param until_time_stamp: stop time_stamp
         :return: tuple[int]
         """
-        return (
-            crc32(self.last_update),
-            crc32(self.last_writer),
-            crc32(self.value),
-        )
+        return hash(self.value)
 
     def history(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
@@ -421,6 +413,7 @@ class LastWriterWinsRegister(CRDT):
                 data=self.value,
                 update_type=None,
                 writer=self.last_writer,
+                name=None,
             ),
         )
 
@@ -458,6 +451,7 @@ class LastWriterWinsRegister(CRDT):
             data=value,
             update_type=None,
             writer=writer,
+            name=None,
         )
         self.update(state_update)
 
@@ -515,7 +509,7 @@ class LastWriterWinsMap(CRDT):
 
         names = ObservedRemovedSet() if names is None else names
         registers = {} if registers is None else registers
-        clock = ScalarClock()
+        clock = LogicalClock()
 
         names.clock = clock
 
@@ -533,83 +527,96 @@ class LastWriterWinsMap(CRDT):
     def __setstate__(self, state):
         self.__dict__ = state
 
-    def read(self, inject=None) -> dict:
+    def read(self) -> dict:
         """
         Return the eventually consistent data view.
-        :param inject: optional dict
         :return: dict
         """
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-
         result = {}
-        for name in self.names.read(inject=inject):
-            result[name] = self.registers[name].read(inject=inject)
-
+        for name in self.names.read():
+            result[name] = self.registers[name].read()
         return result
 
-    def update(self, state_update: Update, /, *, inject=None) -> LastWriterWinsMap:
+    def update(self, state_update: Update) -> LastWriterWinsMap:
         """
         Apply an update.
         :param state_update: Update
-        :param inject: dict
         :return: self (LastWriterWinsMap)
         :raises TypeError: invalid state_update data
         :raises ValueError: invalid state_update
         """
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
         if state_update.clock_uuid != self.clock.uuid:
             raise ValueError("state_update.clock_uuid must equal CRDT.clock.uuid")
-        if len(state_update.data) != 4:
-            raise ValueError(
-                "state_update.data must be tuple of (str, Hashable, int, SerializableType)"
-            )
-
-        o, n, w, w = state_update.data
-        if not (type(o) is str and o in ("o", "r")):
-            raise TypeError("state_update.data[0] must be str op one of ('o', 'r')")
 
         self.invoke_listeners(state_update)
-        time_stamp = state_update.time_stamp
-
-        if o == "o":
+        if state_update.update_type == UpdateType.Observed:
             self.names.update(
-                Update(self.clock.uuid, time_stamp, ("o", n)), inject=inject
+                Update(
+                    self.clock.uuid,
+                    state_update.time_stamp,
+                    state_update.data,
+                    UpdateType.Observed,
+                    state_update.writer,
+                    state_update.name,
+                )
             )
-            if n not in self.registers and n in self.names.read():
-                self.registers[n] = LastWriterWinsRegister(
-                    n, w, self.clock, time_stamp, w
+            if (
+                state_update.name not in self.registers
+                and state_update.name in self.names.read()
+            ):
+                self.registers[state_update.name] = LastWriterWinsRegister(
+                    state_update.name,
+                    state_update.data,
+                    self.clock,
+                    state_update.time_stamp,
+                    state_update.writer,
                 )
 
-        if o == "r":
+        if state_update.update_type == UpdateType.Removed:
             self.names.update(
-                Update(self.clock.uuid, time_stamp, ("r", n)), inject=inject
+                Update(
+                    self.clock.uuid,
+                    state_update.time_stamp,
+                    state_update.data,
+                    UpdateType.Removed,
+                    state_update.writer,
+                    state_update.name,
+                )
             )
 
-            if n not in self.names.read(inject=inject) and n in self.registers:
-                del self.registers[n]
+            if (
+                state_update.name not in self.names.read()
+                and state_update.name in self.registers
+            ):
+                del self.registers[state_update.name]
 
-        if n in self.registers:
-            self.registers[n].update(
-                Update(self.clock.uuid, time_stamp, (w, w)), inject=inject
+        if state_update.name in self.registers:
+            self.registers[state_update.name].update(
+                Update(
+                    self.clock.uuid,
+                    state_update.time_stamp,
+                    state_update.data,
+                    state_update.update_type,
+                    state_update.writer,
+                    state_update.name,
+                )
             )
 
         return self
 
-    def checksums(
-        self, /, *, from_time_stamp: Any = None, until_time_stamp: Any = None
-    ) -> tuple[int | Any, int | Any, int | Any, Any]:
+    def checksum(
+        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+    ) -> tuple[int]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
-        :param from_time_stamp: Any
-        :param until_time_stamp: Any
+        :param from_time_stamp: unix timestamp
+        :param until_time_stamp: unix timestamp
         :return: tuple[int]
         """
-        names_checksums = self.names.checksums(
+        names_checksums = self.names.checksum(
             from_time_stamp=from_time_stamp, until_time_stamp=until_time_stamp
         )
-        total_last_update = 0
-        total_last_writer = 0
-        total_register_crc32 = 0
+        total = 0
 
         for name in self.registers:
             ts = self.registers[name].last_update
@@ -619,31 +626,22 @@ class LastWriterWinsMap(CRDT):
             if until_time_stamp is not None:
                 if self.clock.is_later(ts, until_time_stamp):
                     continue
-            total_register_crc32 += crc32(
-                pack(self.registers[name].name) + pack(self.registers[name].value)
-            )
-            total_last_update += crc32(pack(self.registers[name].last_update))
-            total_last_writer += crc32(pack(self.registers[name].last_writer))
+            total += 1
 
-        return (
-            total_last_update % 2**32,
-            total_last_writer % 2**32,
-            total_register_crc32 % 2**32,
-            *names_checksums,
-        )
+        return total
 
     def history(
-        self, /, *, from_time_stamp: Any = None, until_time_stamp: Any = None
+        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
     ) -> tuple[Update, ...]:
         """
         Returns a concise history of Updates that will converge to the underlying data. Useful for
         resynchronization by replaying updates from divergent nodes.
-        :param from_time_stamp: Any
-        :param until_time_stamp: Any
+        :param from_time_stamp: unix timestamp
+        :param until_time_stamp: unix timestamp
         :return: tuple[Update]
         """
-        registers_history: dict[SerializableType, tuple[Update]] = {}
-        orset_history = self.names.history(
+        registers_history: dict[Hashable, tuple[Update]] = {}
+        observed_removed_set_history = self.names.history(
             from_time_stamp=from_time_stamp, until_time_stamp=until_time_stamp
         )
         history = []
@@ -653,20 +651,17 @@ class LastWriterWinsMap(CRDT):
                 from_time_stamp=from_time_stamp, until_time_stamp=until_time_stamp
             )
 
-        for update in orset_history:
-            name = update.data[1]
-            if name in registers_history:
-                register_update = registers_history[name][0]
+        for update in observed_removed_set_history:
+            if update.name in registers_history:
+                register_update = registers_history[update.name][0]
                 history.append(
                     Update(
                         clock_uuid=update.clock_uuid,
                         time_stamp=register_update.time_stamp,
-                        data=(
-                            update.data[0],
-                            name,
-                            register_update.data[0],
-                            register_update.data[1],
-                        ),
+                        data=register_update.data,
+                        update_type=register_update.update_type,
+                        writer=register_update.writer,
+                        name=update.name,
                     )
                 )
             else:
@@ -674,7 +669,10 @@ class LastWriterWinsMap(CRDT):
                     Update(
                         clock_uuid=update.clock_uuid,
                         time_stamp=update.time_stamp,
-                        data=(update.data[0], name, 0, None),
+                        data=update.data,
+                        update_type=update.update_type,
+                        writer=update.writer,
+                        name=update.name,
                     )
                 )
 
@@ -700,26 +698,27 @@ class LastWriterWinsMap(CRDT):
         """
         return resolve_merkle_tree(self, tree=history)
 
-    def set(
-        self, name: Hashable, value: SerializableType, writer: SerializableType
-    ) -> Update:
+    def set(self, name: Hashable, value: Hashable, writer: Hashable) -> Update:
         """
         Extends the dict with name: value. Returns an Update that should be propagated to all nodes.
         :param name: Hashable
-        :param value: SerializableType
-        :param writer: SerializableType
+        :param value: value to store
+        :param writer: hashable
         :return: Update
         """
         state_update = Update(
             clock_uuid=self.clock.uuid,
             time_stamp=self.clock.read(),
-            data=("o", name, writer, value),
+            data=value,
+            update_type=UpdateType.Observed,
+            writer=writer,
+            name=name,
         )
         self.update(state_update)
 
         return state_update
 
-    def unset(self, name: Hashable, writer: SerializableType) -> Update:
+    def unset(self, name: Hashable, writer: Hashable) -> Update:
         """
         Removes the key name from the dict.
         :param name: Hashable
@@ -729,7 +728,10 @@ class LastWriterWinsMap(CRDT):
         state_update = Update(
             clock_uuid=self.clock.uuid,
             time_stamp=self.clock.read(),
-            data=("r", name, writer, None),
+            data=None,
+            update_type=UpdateType.Removed,
+            writer=writer,
+            name=name,
         )
         self.update(state_update)
 
@@ -822,7 +824,7 @@ class CRDTList(Generic[T]):
         :raises ValueError: item not found
         """
         result = next(
-            iter([i for i, h in self.hardware.read(inject=self.inject) if h == item]),
+            iter([i for i, h in self.hardware.read() if h == item]),
             None,
         )
         if result is None:
@@ -838,7 +840,7 @@ class CRDTList(Generic[T]):
         if index >= len(self):
             self.log.debug(f"Index {index} out of bounds, returning default.")
             return default
-        item = self.hardware.read(inject=self.inject)[index]
+        item = self.hardware.read()[index]
         self.hardware.unset(item, hash(item))
         return item
 
@@ -851,7 +853,7 @@ class CRDTList(Generic[T]):
         :raises ValueError: item not found
         """
         local_item = next(
-            iter([h for _, h in self.hardware.read(inject=self.inject) if h == item]),
+            iter([h for _, h in self.hardware.read() if h == item]),
             None,
         )
         if not local_item:
@@ -876,41 +878,37 @@ class CRDTList(Generic[T]):
         raise NotImplementedError("Cannot sort a list inplace in a CRDT")
 
     def __len__(self) -> int:
-        return len(self.hardware.read(inject=self.inject))
+        return len(self.hardware.read())
 
     def __eq__(self, other: CRDTList[T]) -> bool:
-        return self.hardware.read(inject=self.inject) == other.hardware.read(
-            inject=self.inject
-        )
+        return self.hardware.read() == other.hardware.read()
 
     def __ne__(self, other: CRDTList[T]) -> bool:
-        return self.hardware.read(inject=self.inject) != other.hardware.read(
-            inject=self.inject
-        )
+        return self.hardware.read() != other.hardware.read()
 
     def __contains__(self, item: T) -> bool:
-        return item in self.hardware.read(inject=self.inject)
+        return item in self.hardware.read()
 
     def __delitem__(self, item: T) -> None:
-        if item not in self.hardware.read(inject=self.inject):
+        if item not in self.hardware.read():
             raise KeyError(f"{item} not found.")
         self.remove(item)
 
     def __getitem__(self, index: int) -> T:
-        return self.hardware.read(inject=self.inject)[index]
+        return self.hardware.read()[index]
 
     def __setitem__(self, index: int, value: T) -> None:
         self.hardware.set(index, value, hash(value))
 
     def __iter__(self) -> Iterable[T]:
-        for _, item in self.hardware.read(inject=self.inject):
+        for _, item in self.hardware.read():
             yield item
 
     def __next__(self) -> T:
         if self.iterator >= len(self):
             self.iterator = 0
             raise StopIteration
-        item = self.hardware.read(inject=self.inject)[self.iterator]
+        item = self.hardware.read()[self.iterator]
         self.iterator += 1
         return item
 
@@ -923,10 +921,10 @@ class CRDTList(Generic[T]):
         return self
 
     def __repr__(self) -> str:
-        return f"HardwareList({self.hardware.read(inject=self.inject)})"
+        return f"HardwareList({self.hardware.read()})"
 
     def __reversed__(self) -> CRDTList[T]:
-        return self.hardware.read(inject=self.inject)[::-1]
+        return self.hardware.read()[::-1]
 
     def __sizeof__(self) -> int:
         return self.count()

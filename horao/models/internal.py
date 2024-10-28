@@ -9,31 +9,26 @@ from uuid import uuid4
 
 
 @dataclass
-class ScalarClock:
-    """Lamport logical scalar clock."""
+class LogicalClock:
+    """Lamport logical clock."""
 
-    counter: float = field(default=datetime.timestamp(datetime.now(tz=timezone.utc)))
+    time_stamp: float = field(default=datetime.timestamp(datetime.now(tz=timezone.utc)))
     uuid: bytes = field(default_factory=lambda: uuid4().bytes)
-    default_time_stamp: float = field(
-        default=datetime.timestamp(datetime.now(tz=timezone.utc))
-    )
 
     def read(self) -> float:
         """
         Return the current timestamp.
         :return: unix timestamp
         """
-        return self.counter
+        return self.time_stamp
 
-    def update(self, data: float) -> float:
+    def update(self) -> float:
         """
         Update the clock and return the current time stamp.
-        :param data: unix timestamp (new clock value)
         :return: unix timestamp (clock value set)
         """
-        if data >= self.counter:
-            self.counter = data
-        return self.counter
+        self.time_stamp = datetime.timestamp(datetime.now(tz=timezone.utc))
+        return self.time_stamp
 
     @staticmethod
     def is_later(time_stamp: float, other_time_stamp: float) -> bool:
@@ -73,7 +68,7 @@ class ScalarClock:
         return 0
 
     def __repr__(self) -> str:
-        return f"ScalarClock(counter={self.counter}, uuid={self.uuid.hex()}, default_time_stamp={self.default_time_stamp})"
+        return f"ScalarClock(time_stamp={self.time_stamp}, uuid={self.uuid.hex()})"
 
 
 class UpdateType(Enum):
@@ -87,27 +82,42 @@ class Update:
 
     clock_uuid: bytes
     time_stamp: float
-    data: Hashable
+    data: Optional[Hashable]
     update_type: Optional[UpdateType]
     writer: Optional[Hashable]
+    name: Optional[Hashable]
 
     def sha256(self) -> bytes:
         return sha256(f"{hash(self)}".encode("utf-8")).digest()
 
     def __hash__(self):
         return hash(
-            (self.clock_uuid, self.time_stamp, self.data, self.update_type, self.writer)
+            (
+                self.clock_uuid,
+                self.time_stamp,
+                self.data,
+                self.update_type,
+                self.writer,
+                self.name,
+            )
         )
 
     def __repr__(self) -> str:
-        return f"Update(clock_uuid={self.clock_uuid.hex()}, time_stamp={self.time_stamp}, data={self.data}, update_type={self.update_type}, writer={self.writer})"
+        return (
+            f"Update(clock_uuid={self.clock_uuid.hex()}, "
+            f"time_stamp={self.time_stamp}, "
+            f"data={self.data}, "
+            f"update_type={self.update_type}, "
+            f"writer={self.writer}), "
+            f"name={self.name})"
+        )
 
 
 @runtime_checkable
 class CRDT(Protocol):
     """Protocol showing what CRDTs must do."""
 
-    clock: ScalarClock
+    clock: LogicalClock
 
     def read(self) -> Any:
         """
@@ -124,9 +134,9 @@ class CRDT(Protocol):
         """
         ...
 
-    def checksums(
+    def checksum(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[Any]:
+    ) -> tuple[int]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: start time_stamp
@@ -151,12 +161,11 @@ class CRDT(Protocol):
         """
         ...
 
-    def get_merkle_tree(self, /) -> list[bytes, list[bytes], dict[bytes, bytes]]:
+    def get_merkle_tree(self) -> list[bytes, list[bytes], dict[bytes, bytes]]:
         """
         Get a Merkle tree of history for the Updates of the form [root, [content_id for update in self.history()], {
         content_id: packed for update in self.history()}] where packed is the result of update.pack() and content_id
         is the sha256 of the packed update.
-        :param update_class: type of update to use
         :return: list[bytes, list[bytes], dict[bytes, bytes
         """
         ...

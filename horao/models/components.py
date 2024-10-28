@@ -260,10 +260,5 @@ T = TypeVar("T", bound=Hardware)
 
 
 class HardwareList(CRDTList[T]):
-    def __init__(
-        self,
-        hardware: List[T] = None,
-        items: LastWriterWinsMap = None,
-        inject=None,
-    ):
-        super().__init__(hardware, items, inject)
+    def __init__(self, hardware: List[T] = None, items: LastWriterWinsMap = None):
+        super().__init__(hardware, items)
