@@ -60,25 +60,6 @@ class Hardware(ABC):
         """
         return hash((self.serial_number, self.name, self.model))
 
-    def pack(self) -> bytes:
-        """
-        Serialize the hardware instance
-        :return: instance as bytes
-        """
-        return pack([self.serial_number, self.name, self.model, self.number])
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Hardware:
-        """
-        Deserialize the hardware instance
-        :param data: bytes of instance
-        :param inject: optional dictionary of global variables
-        :return: instance of Hardware
-        """
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        serial, name, model, number = unpack(data, inject=inject)
-        return cls(serial, name, model, number)
-
 
 class RAM(Hardware):
     def __init__(
@@ -103,24 +84,6 @@ class RAM(Hardware):
             self.size_gb,
             self.speed_mhz,
         )
-
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                self.size_gb,
-                self.speed_mhz,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> RAM:
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        serial, name, model, number, size_gb, speed_mhz = unpack(data, inject=inject)
-        return cls(serial, name, model, number, size_gb, speed_mhz)
 
 
 class CPU(Hardware):
@@ -150,27 +113,6 @@ class CPU(Hardware):
             self.features,
         )
 
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                self.clock_speed,
-                self.cores,
-                self.features,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> CPU:
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        serial, name, model, number, clock_speed, cores, features = unpack(
-            data, inject=inject
-        )
-        return cls(serial, name, model, number, clock_speed, cores, features)
-
 
 class Accelerator(Hardware):
     def __init__(
@@ -199,27 +141,6 @@ class Accelerator(Hardware):
             self.clock_speed,
         )
 
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                self.memory_gb,
-                self.chip,
-                self.clock_speed,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Accelerator:
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        serial, name, model, number, memory_gb, chip, clock_speed = unpack(
-            data, inject=inject
-        )
-        return cls(serial, name, model, number, memory_gb, chip, clock_speed)
-
 
 class Disk(Hardware):
     def __init__(
@@ -237,23 +158,6 @@ class Disk(Hardware):
         return Disk(
             self.serial_number, self.name, self.model, self.number, self.size_gb
         )
-
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                self.size_gb,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Disk:
-        inject = {**globals(), **inject} if inject is not None else {**globals()}
-        serial, name, model, number, size_gb = unpack(data, inject=inject)
-        return cls(serial, name, model, number, size_gb)
 
 
 T = TypeVar("T", bound=Hardware)

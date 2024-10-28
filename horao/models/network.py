@@ -11,7 +11,6 @@ from enum import Enum, auto
 from typing import List, Optional, TypeVar
 
 import networkx as nx  # type: ignore
-from packify import pack, unpack
 
 from horao.models.components import Hardware
 from horao.models.crdt import CRDTList, LastWriterWinsMap
@@ -115,34 +114,12 @@ class NetworkDevice(Hardware):
     def __hash__(self) -> int:
         return hash((self.serial_number, self.model))
 
-    def pack(self) -> bytes:
-        return pack(
-            [self.serial_number, self.name, self.model, self.number, self.ports]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> NetworkDevice:
-        inject = {**globals()} if not inject else {**globals(), **inject}
-        serial, name, model, number, ports = unpack(*data, inject=inject)
-        return cls(serial, name, model, number, ports)
-
 
 class NIC(NetworkDevice):
     def __init__(
         self, serial_number: str, name: str, model: str, number: int, ports: List[Port]
     ):
         super().__init__(serial_number, name, model, number, ports)
-
-    def pack(self) -> bytes:
-        return pack(
-            [self.serial_number, self.name, self.model, self.number, self.ports]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> NIC:
-        inject = {**globals()} if not inject else {**globals(), **inject}
-        serial, name, model, number, ports = unpack(*data, inject=inject)
-        return cls(serial, name, model, number, ports)
 
 
 class Firewall(NetworkDevice):
@@ -161,35 +138,6 @@ class Firewall(NetworkDevice):
         self.status = status
         self.wan_ports = wan_ports
 
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                1 if self.status == DeviceStatus.Up else 0,
-                self.ports,
-                self.wan_ports,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Firewall:
-        inject = {**globals()} if not inject else {**globals(), **inject}
-        serial, name, model, number, status, ports, wan_ports = unpack(
-            data, inject=inject
-        )
-        return cls(
-            serial_number=serial,
-            name=name,
-            model=model,
-            number=number,
-            status=DeviceStatus.Up if status == 1 else DeviceStatus.Down,
-            lan_ports=ports,
-            wan_ports=wan_ports,
-        )
-
 
 class Router(NetworkDevice):
     def __init__(
@@ -207,44 +155,6 @@ class Router(NetworkDevice):
         self.router_type = router_type
         self.status = status
         self.wan_ports = wan_ports
-
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                1 if self.router_type == RouterType.Core else 2,
-                1 if self.status == DeviceStatus.Up else 0,
-                self.ports,
-                self.wan_ports,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Router:
-        inject = {**globals()} if not inject else {**globals(), **inject}
-        (
-            serial,
-            name,
-            model,
-            number,
-            router_type,
-            status,
-            ports,
-            wan_ports,
-        ) = unpack(data, inject=inject)
-        return cls(
-            serial_number=serial,
-            name=name,
-            model=model,
-            number=number,
-            router_type=RouterType.Core if router_type == 1 else RouterType.Edge,
-            status=DeviceStatus.Up if status == 1 else DeviceStatus.Down,
-            lan_ports=ports,
-            wan_ports=wan_ports,
-        )
 
 
 class Switch(NetworkDevice):
@@ -268,67 +178,10 @@ class Switch(NetworkDevice):
         self.managed = managed
         self.uplink_ports = uplink_ports
 
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                2 if self.layer == LinkLayer.Layer2 else 3,
-                (
-                    1
-                    if self.switch_type == SwitchType.Access
-                    else 2 if self.switch_type == SwitchType.Distribution else 3
-                ),
-                1 if self.status == DeviceStatus.Up else 0,
-                1 if self.managed else 0,
-                self.ports,
-                self.uplink_ports,
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Switch:
-        inject = {**globals()} if not inject else {**globals(), **inject}
-        (
-            serial,
-            name,
-            model,
-            number,
-            layer,
-            switch_type,
-            status,
-            managed,
-            ports,
-            uplink_ports,
-        ) = unpack(data, inject=inject)
-        return cls(
-            serial_number=serial,
-            name=name,
-            model=model,
-            number=number,
-            layer=LinkLayer.Layer2 if layer == 2 else LinkLayer.Layer3,
-            switch_type=(
-                SwitchType.Access
-                if switch_type == 1
-                else SwitchType.Distribution if switch_type == 2 else SwitchType.Core
-            ),
-            status=DeviceStatus.Up if status == 1 else DeviceStatus.Down,
-            managed=True if managed == 1 else False,
-            lan_ports=ports,
-            uplink_ports=uplink_ports,
-        )
-
 
 T = TypeVar("T", bound=NetworkDevice)
 
 
 class NetworkList(CRDTList[T]):
-    def __init__(
-        self,
-        devices: List[T] = None,
-        items: LastWriterWinsMap = None,
-        inject=None,
-    ):
-        super().__init__(devices, items, inject=inject)
+    def __init__(self, devices: List[T] = None, items: LastWriterWinsMap = None):
+        super().__init__(devices, items)

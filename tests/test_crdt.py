@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import permutations
 
 from horao.models.crdt import (
@@ -145,35 +146,6 @@ def test_lww_register_history_return_value_determined_by_from_ts_and_until_ts():
     )
 
 
-def test_lww_register_merkle_history_e2e():
-    lww_register1 = LastWriterWinsRegister("test")
-    lww_register2 = LastWriterWinsRegister(
-        "test", clock=LogicalClock(0, lww_register1.clock.uuid)
-    )
-    lww_register2.update(lww_register1.write("hello world", 1))
-    lww_register2.update(lww_register1.write(b"hello world", 1))
-    lww_register1.write("hello world", 1)
-    lww_register1.write("hello", 1)
-    lww_register2.write(b"world", 2)
-
-    history1 = lww_register1.get_merkle_history()
-    history2 = lww_register2.get_merkle_history()
-    cidmap1 = history1[2]
-    cidmap2 = history2[2]
-
-    diff1 = lww_register1.resolve_merkle_histories(history2)
-    diff2 = lww_register2.resolve_merkle_histories(history1)
-    assert len(diff1) == 1, [d.hex() for d in diff1]
-    assert len(diff2) == 1, [d.hex() for d in diff2]
-
-    for cid in diff1:
-        lww_register1.update(Update.unpack(cidmap2[cid]))
-    for cid in diff2:
-        lww_register2.update(Update.unpack(cidmap1[cid]))
-
-    assert lww_register1.checksum() == lww_register2.checksum()
-
-
 def test_lww_register_event_listeners_e2e():
     lww_register = LastWriterWinsRegister("test")
     logs = []
@@ -193,13 +165,13 @@ def test_lww_register_event_listeners_e2e():
 
 
 def test_or_set_read_returns_add_biased_set_difference():
-    orset = ObservedRemovedSet()
-    assert orset.read() == set()
-    orset.observe(1)
-    orset.observe(2)
-    assert orset.read() == {1, 2}
-    orset.remove(1)
-    assert orset.read() == {2}
+    or_set = ObservedRemovedSet()
+    assert or_set.read() == set()
+    or_set.observe(1)
+    or_set.observe(2)
+    assert or_set.read() == {1, 2}
+    or_set.remove(1)
+    assert or_set.read() == {2}
 
 
 def test_or_set_observe_and_remove_return_state_update():
@@ -337,21 +309,6 @@ def test_or_set_updates_from_history_converge():
         assert orset2.checksum() == orset1.checksum()
 
 
-def test_or_set_pack_unpack_e2e():
-    orset1 = ObservedRemovedSet()
-    orset1.observe(1)
-    orset1.observe("hello")
-    orset1.remove(2)
-    orset1.remove(b"hello")
-    packed = orset1.pack()
-    orset2 = ObservedRemovedSet.unpack(packed)
-
-    assert orset1.clock.uuid == orset2.clock.uuid
-    assert orset1.read() == orset2.read()
-    assert orset1.checksum() == orset2.checksum()
-    assert orset1.history() in permutations(orset2.history())
-
-
 def test_or_set_cache_is_set_upon_first_read():
     orset = ObservedRemovedSet()
     orset.observe(1)
@@ -407,36 +364,6 @@ def test_or_set_convergence_from_ts():
     for update in orset1.history(from_time_stamp=99):
         orset2.update(update)
     assert orset1.checksum() != orset2.checksum()
-
-
-def test_or_set_merkle_history_e2e():
-    ors1 = ObservedRemovedSet()
-    ors2 = ObservedRemovedSet(clock=LogicalClock(0, ors1.clock.uuid))
-    ors2.update(ors1.observe("hello world"))
-    ors2.update(ors1.observe(b"hello world"))
-    ors1.remove("hello world")
-    ors1.observe("abra")
-    ors2.observe(b"cadabra")
-
-    history1 = ors1.get_merkle_history()
-    history2 = ors2.get_merkle_history()
-    cidmap1 = history1[2]
-    cidmap2 = history2[2]
-
-    diff1 = ors1.resolve_merkle_histories(history2)
-    diff2 = ors2.resolve_merkle_histories(history1)
-    assert len(diff1) == 2, [d.hex() for d in diff1]
-    assert len(diff2) == 2, [d.hex() for d in diff2]
-
-    for cid in diff1:
-        update = Update.unpack(cidmap2[cid])
-        ors1.update(update)
-    for cid in diff2:
-        update = Update.unpack(cidmap1[cid])
-        ors2.update(update)
-
-    assert ors1.get_merkle_history() == ors2.get_merkle_history()
-    assert ors1.checksum() == ors2.checksum()
 
 
 def test_or_set_event_listeners_e2e():
@@ -529,64 +456,6 @@ def test_lww_map_update_is_idempotent():
 
     assert checksums1 == checksums2
     assert view1 == view2
-
-
-def test_lww_map_pack_unpack_e2e():
-    lww_map = LastWriterWinsMap()
-    lww_map.set("foo", "bar", 1)
-    lww_map.set("foo", "rab", 1)
-    lww_map.set("foof", "barb", 1)
-    lww_map.unset("foof", 1)
-    lww_map.set("oof", "rab", 1)
-    packed = lww_map.pack()
-    unpacked = LastWriterWinsMap.unpack(packed)
-
-    assert unpacked.checksum() == lww_map.checksum()
-
-
-def test_lww_map_convergence_from_ts():
-    lww_map1 = LastWriterWinsMap()
-    lww_map2 = LastWriterWinsMap()
-    lww_map2.clock.uuid = lww_map1.clock.uuid
-    for i in range(10):
-        update = lww_map1.set(i, i, 1)
-        lww_map2.update(update)
-    assert lww_map1.checksum() == lww_map2.checksum()
-
-    lww_map1.set(69420, 69420, 1)
-    lww_map1.set(42096, 42096, 1)
-    lww_map2.set(23878, 23878, 2)
-
-    # not the most efficient algorithm, but it demonstrates the concept
-    from_ts = 0
-    until_ts = lww_map1.clock.read()
-    chksm1 = lww_map1.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
-    chksm2 = lww_map2.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
-    while chksm1 != chksm2 and until_ts > 0:
-        until_ts -= 1
-        chksm1 = lww_map1.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
-        chksm2 = lww_map2.checksum(from_time_stamp=from_ts, until_time_stamp=until_ts)
-    from_ts = until_ts
-    assert from_ts > 0
-
-    for update in lww_map1.history(from_time_stamp=from_ts):
-        lww_map2.update(update)
-    for update in lww_map2.history(from_time_stamp=from_ts):
-        lww_map1.update(update)
-
-    assert lww_map1.checksum() == lww_map2.checksum()
-
-    lww_map2 = LastWriterWinsMap()
-    lww_map2.clock.uuid = lww_map1.clock.uuid
-    for update in lww_map1.history(until_time_stamp=0):
-        lww_map2.update(update)
-    assert lww_map1.checksum() != lww_map2.checksum()
-
-    lww_map2 = LastWriterWinsMap()
-    lww_map2.clock.uuid = lww_map1.clock.uuid
-    for update in lww_map1.history(from_time_stamp=99):
-        lww_map2.update(update)
-    assert lww_map1.checksum() != lww_map2.checksum()
 
 
 def test_lww_map_event_listeners_e2e():

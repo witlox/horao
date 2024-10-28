@@ -20,7 +20,7 @@ def instrument_class_function(
     def inner(func):
         @wraps(func)
         def instrumented_logging(*args, **kwargs):
-            with t.start_as_current_span():
+            with t.start_as_current_span(name):
                 if level >= logging.getLogger().getEffectiveLevel():
                     current_span = trace.get_current_span()
                     current_span.add_event(

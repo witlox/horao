@@ -6,7 +6,6 @@ import logging
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import networkx as nx
-from packify import pack, unpack
 
 from . import DeviceStatus, Firewall, NetworkTopology, NetworkType, Port, Router
 from .components import Hardware, HardwareList
@@ -44,27 +43,6 @@ class Cabinet(Hardware):
             list(iter(self.chassis)),
             list(iter(self.switches)),
         )
-
-    def pack(self) -> bytes:
-        return pack(
-            [
-                self.serial_number,
-                self.name,
-                self.model,
-                self.number,
-                self.servers.pack(),
-                self.chassis.pack(),
-                self.switches.pack(),
-            ]
-        )
-
-    @classmethod
-    def unpack(cls, data: bytes, /, *, inject: dict = None) -> Cabinet:
-        inject = {**globals()} if not inject else {**globals(), **inject}
-        serial, name, model, number, servers, chassis, switches = unpack(
-            data, inject=inject
-        )
-        return cls(serial, name, model, number, servers, chassis, switches)
 
 
 class DataCenter:
@@ -105,13 +83,13 @@ class DataCenter:
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:
         result = {}
-        for k, v in self.rows.read(inject=self.inject):
+        for k, v in self.rows.read():
             result[k] = list(iter(v))
         return result
 
     @instrument_class_function(name="has_key", level=logging.DEBUG)
     def has_key(self, k: int) -> bool:
-        for key, _ in self.rows.read(inject=self.inject):
+        for key, _ in self.rows.read():
             if key == k:
                 return True
         return False
@@ -120,17 +98,17 @@ class DataCenter:
         self.rows.set(key, value, hash(key))
 
     def keys(self) -> List[int]:
-        return [k for k, _ in self.rows.read(inject=self.inject)]
+        return [k for k, _ in self.rows.read()]
 
     def values(self) -> List[List[Cabinet]]:
-        return [v for _, v in self.rows.read(inject=self.inject)]
+        return [v for _, v in self.rows.read()]
 
     def items(self) -> List[Tuple[int, List[Cabinet]]]:
-        return [(k, v) for k, v in self.rows.read(inject=self.inject)]
+        return [(k, v) for k, v in self.rows.read()]
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
     def pop(self, key: int) -> List[Cabinet]:
-        for k, v in self.rows.read(inject=self.inject):
+        for k, v in self.rows.read():
             if k == key:
                 self.rows.unset(key, key)
                 return v.value
@@ -147,14 +125,14 @@ class DataCenter:
 
     @instrument_class_function(name="getitem", level=logging.DEBUG)
     def __getitem__(self, key):
-        for k, v in self.rows.read(inject=self.inject):
+        for k, v in self.rows.read().items():
             if k == key:
                 return v.value
         raise KeyError(f"Key {key} not found")
 
     @instrument_class_function(name="delitem", level=logging.DEBUG)
     def __delitem__(self, key):
-        for k, v in self.rows.read(inject=self.inject):
+        for k, v in self.rows.read().items():
             if k == key:
                 self.rows.unset(key, hash(key))
                 return
@@ -164,10 +142,10 @@ class DataCenter:
         return f"DataCenter({self.number}, {self.name}))"
 
     def __len__(self) -> int:
-        return len(self.rows.read(inject=self.inject))
+        return len(self.rows.read())
 
     def __contains__(self, cabinet: Cabinet) -> bool:
-        for _, v in self.rows.read(inject=self.inject):
+        for _, v in self.rows.read().items():
             if cabinet in v:
                 return True
         return False
@@ -258,17 +236,19 @@ class DataCenter:
         :return: NIC object
         :raises: ValueError if any of the indexes are out of bounds
         """
-        if row >= len(self):
+        if row > len(self):
             raise ValueError("Row does not exist")
-        if cabinet >= len(self[row].cabinets):
+        if cabinet > len(self.rows.read()):
             raise ValueError("Cabinet does not exist")
-        if chassis is not None and chassis >= len(self[row].cabinets[cabinet].chassis):
+        if chassis is not None and chassis > len(
+            self.rows.read()[row - 1][cabinet - 1].chassis
+        ):
             raise ValueError("Chassis does not exist")
-        if server >= len(self[row].cabinets[cabinet].servers):
+        if server > len(self.rows.read()[row][cabinet - 1].servers):
             raise ValueError("Server does not exist")
-        if nic >= len(self[row].cabinets[cabinet].servers[server].nics):
+        if nic > len(self.rows.read()[row][cabinet - 1].servers[server - 1].nics):
             raise ValueError("NIC does not exist")
-        return self[row].cabinets[cabinet].servers[server].nics[nic]
+        return self.rows.read()[row][cabinet - 1].servers[server - 1].nics[nic - 1]
 
 
 class DataCenterNetwork:

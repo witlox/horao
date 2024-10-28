@@ -137,7 +137,7 @@ def test_link_server_to_switch_ports_up_unlink_downs():
     assert server_nic is not None
     snp = next(iter(server_nic.ports), None)
     assert snp is not None
-    fetched_server_nic = dc.fetch_server_nic(0, 0, 0, 0, None)
+    fetched_server_nic = dc.fetch_server_nic(1, 1, 1, 1, None)
     assert fetched_server_nic.ports is not None
     fetched_server_nic_port = next(iter(fetched_server_nic.ports))
     assert fetched_server_nic_port is not None and fetched_server_nic_port == snp

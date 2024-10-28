@@ -1,28 +1,23 @@
 from __future__ import annotations
 
 import logging
-from binascii import crc32
 from dataclasses import dataclass, field
 from typing import (
     Any,
     Callable,
+    Dict,
     Generic,
     Hashable,
     Iterable,
     List,
     Optional,
+    Set,
+    Tuple,
     TypeVar,
 )
 
 from horao.models.decorators import instrument_class_function
-from horao.models.internal import (
-    CRDT,
-    LogicalClock,
-    Update,
-    UpdateType,
-    get_merkle_tree,
-    resolve_merkle_tree,
-)
+from horao.models.internal import CRDT, LogicalClock, Update, UpdateType
 
 
 @dataclass
@@ -32,13 +27,13 @@ class ObservedRemovedSet(CRDT):
     from the observed set. Add-biased.
     """
 
-    observed: set[Hashable] = field(default_factory=set)
-    observed_metadata: dict[Hashable, Update] = field(default_factory=dict)
-    removed: set[Hashable] = field(default_factory=set)
-    removed_metadata: dict[Hashable, Update] = field(default_factory=dict)
+    observed: Set[Hashable] = field(default_factory=set)
+    observed_metadata: Dict[Hashable, Update] = field(default_factory=dict)
+    removed: Set[Hashable] = field(default_factory=set)
+    removed_metadata: Dict[Hashable, Update] = field(default_factory=dict)
     clock: LogicalClock = field(default_factory=LogicalClock)
-    cache: Optional[tuple] = field(default=None)
-    listeners: list[Callable] = field(default_factory=list)
+    cache: Optional[Tuple] = field(default=None)
+    listeners: List[Callable] = field(default_factory=list)
 
     def read(self) -> set[Hashable]:
         """
@@ -75,38 +70,26 @@ class ObservedRemovedSet(CRDT):
                 )
             ):
                 self.observed.add(state_update.data)
-                if state_update.data in self.observed_metadata:
-                    old_time_stamp = self.observed_metadata[state_update.data]
-                else:
-                    old_time_stamp = self.clock.time_stamp
-                if self.clock.is_later(state_update.time_stamp, old_time_stamp):
-                    self.observed_metadata[state_update.data] = state_update
+                self.observed_metadata[state_update.data] = state_update
 
                 if state_update.data in self.removed:
                     self.removed.remove(state_update.data)
-                    del self.removed_metadata[state_update.data]
 
                 self.cache = None
 
         if state_update.update_type == UpdateType.Removed:
-            if state_update.data not in self.observed or (
-                state_update.data in self.observed_metadata
+            if state_update.data not in self.removed or (
+                state_update.data in self.removed_metadata
                 and self.clock.is_later(
                     state_update.time_stamp,
                     self.observed_metadata[state_update.data].time_stamp,
                 )
             ):
                 self.removed.add(state_update.data)
-                if state_update.data in self.removed_metadata:
-                    old_time_stamp = self.removed_metadata[state_update.data]
-                else:
-                    old_time_stamp = self.clock.time_stamp
-                if self.clock.is_later(state_update.time_stamp, old_time_stamp):
-                    self.removed_metadata[state_update.data] = state_update
+                self.removed_metadata[state_update.data] = state_update
 
                 if state_update.data in self.observed:
                     self.observed.remove(state_update.data)
-                    del self.observed_metadata[state_update.data]
 
                 self.cache = None
 
@@ -116,33 +99,30 @@ class ObservedRemovedSet(CRDT):
 
     def checksum(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[int, int]:
+    ) -> Tuple[int, ...]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: start time_stamp
         :param until_time_stamp: stop time_stamp
-        :return: tuple[int]
+        :return: tuple[int, int]
         """
-        observed, removed = 0, 0
-        for member, update in self.observed_metadata.items():
-            if from_time_stamp is not None:
-                if self.clock.is_later(from_time_stamp, update.time_stamp):
-                    continue
-            if until_time_stamp is not None:
-                if self.clock.is_later(update.time_stamp, until_time_stamp):
-                    continue
-            observed += 1
 
-        for member, update in self.removed_metadata.items():
-            if from_time_stamp is not None:
-                if self.clock.is_later(from_time_stamp, update.time_stamp):
-                    continue
-            if until_time_stamp is not None:
-                if self.clock.is_later(update.time_stamp, until_time_stamp):
-                    continue
-            removed += 1
+        def retrieve(s: Dict[Hashable, Update]) -> list[Hashable]:
+            result = []
+            for m, u in s.items():
+                if from_time_stamp is not None:
+                    if self.clock.is_later(from_time_stamp, u.time_stamp):
+                        continue
+                if until_time_stamp is not None:
+                    if self.clock.is_later(u.time_stamp, until_time_stamp):
+                        continue
+                result.append(m)
+            return result
 
-        return observed, removed
+        observed = retrieve(self.observed_metadata)
+        removed = retrieve(self.removed_metadata)
+
+        return hash(frozenset(observed)), hash(frozenset(removed))
 
     def history(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
@@ -197,26 +177,6 @@ class ObservedRemovedSet(CRDT):
             )
 
         return tuple(updates)
-
-    def get_merkle_history(self) -> list[bytes | list[bytes] | dict[bytes, bytes]]:
-        """
-        Get a history as merkle tree for the Updates of the form [root, [content_id for update in self.history()], {
-        content_id: packed for update in self.history()}] where packed is the result of update.pack() and content_id
-        is the sha256 of the packed update.
-        :return: list[bytes, list[bytes], dict[bytes, bytes]]
-        """
-        return get_merkle_tree(self)
-
-    def resolve_merkle_histories(
-        self, history: list[bytes, list[bytes]]
-    ) -> list[bytes]:
-        """
-        Accept a history of form [root, leaves] from another node. Return the leaves that need to be resolved
-        and merged for synchronization.
-        :param history: list[bytes, list[bytes]]
-        :return: list[bytes]
-        """
-        return resolve_merkle_tree(self, tree=history)
 
     def observe(self, member: Hashable) -> Update:
         """
@@ -299,7 +259,7 @@ class LastWriterWinsRegister(CRDT):
         name: Hashable,
         value: Hashable = None,
         clock: LogicalClock = None,
-        last_update: Any = None,
+        last_update: float = None,
         last_writer: Hashable = None,
         listeners: list[Callable] = None,
     ) -> None:
@@ -308,7 +268,7 @@ class LastWriterWinsRegister(CRDT):
         :param name: name of the register
         :param value: value stored in the register
         :param clock: ClockProtocol
-        :param last_update: Any
+        :param last_update: last update time_stamp
         :param last_writer: SerializableType
         :param listeners: list[Callable[[UpdateProtocol], None
         :raises TypeError: name, value, clock, or last_writer
@@ -378,14 +338,14 @@ class LastWriterWinsRegister(CRDT):
 
     def checksum(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[int]:
+    ) -> Tuple[int]:
         """
         Returns the hash for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: start time_stamp
         :param until_time_stamp: stop time_stamp
         :return: tuple[int]
         """
-        return hash(self.value)
+        return (hash(self.value),)
 
     def history(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
@@ -416,25 +376,6 @@ class LastWriterWinsRegister(CRDT):
                 name=None,
             ),
         )
-
-    def get_merkle_history(self) -> list[bytes | list[bytes] | dict[bytes, bytes]]:
-        """
-        Get a history as merkle tree for the Updates of the form [root, [content_id for update in self.history()], {
-        content_id: packed for update in self.history()}] where packed is the result of update.pack() and content_id
-        is the sha256 of the packed update.
-        """
-        return get_merkle_tree(self)
-
-    def resolve_merkle_histories(
-        self, history: list[bytes, list[bytes]]
-    ) -> list[bytes]:
-        """
-        Accept a history of form [root, leaves] from another node. Return the leaves that need to be resolved
-        and merged for synchronization.
-        :param history: list[bytes, list[bytes]]
-        :return: list[bytes]
-        """
-        return resolve_merkle_tree(self, tree=history)
 
     def write(self, value: Hashable, writer: Hashable) -> Update:
         """
@@ -487,20 +428,20 @@ class LastWriterWinsMap(CRDT):
     """Last Writer Wins Map CRDT."""
 
     names: ObservedRemovedSet
-    registers: dict[Any, LastWriterWinsRegister]
-    listeners: list[Callable]
+    registers: Dict[Hashable, LastWriterWinsRegister]
+    listeners: List[Callable]
 
     def __init__(
         self,
         names: ObservedRemovedSet = None,
-        registers: dict = None,
-        listeners: list[Callable] = None,
+        registers: Dict = None,
+        listeners: List[Callable] = None,
     ) -> None:
         """
         Initialize an LastWriterWinsMap from an ObservedRemovedSet of names, a dict mapping
         names to LastWriterWinsRegisters, and a shared clock.
         :param names: ObservedRemovedSet
-        :param registers: dict
+        :param registers: dict of names (keys) to LastWriterWinsRegisters (values)
         :param listeners: list[Callable]
         :raises TypeError: registers not filled with correct values (and/or types)
         """
@@ -534,7 +475,8 @@ class LastWriterWinsMap(CRDT):
         """
         result = {}
         for name in self.names.read():
-            result[name] = self.registers[name].read()
+            if name in self.registers:
+                result[name] = self.registers[name].read()
         return result
 
     def update(self, state_update: Update) -> LastWriterWinsMap:
@@ -552,12 +494,12 @@ class LastWriterWinsMap(CRDT):
         if state_update.update_type == UpdateType.Observed:
             self.names.update(
                 Update(
-                    self.clock.uuid,
-                    state_update.time_stamp,
-                    state_update.data,
-                    UpdateType.Observed,
-                    state_update.writer,
-                    state_update.name,
+                    clock_uuid=self.clock.uuid,
+                    time_stamp=state_update.time_stamp,
+                    data=state_update.name,
+                    update_type=UpdateType.Observed,
+                    writer=state_update.writer,
+                    name=state_update.name,
                 )
             )
             if (
@@ -577,7 +519,7 @@ class LastWriterWinsMap(CRDT):
                 Update(
                     self.clock.uuid,
                     state_update.time_stamp,
-                    state_update.data,
+                    state_update.name,
                     UpdateType.Removed,
                     state_update.writer,
                     state_update.name,
@@ -606,29 +548,26 @@ class LastWriterWinsMap(CRDT):
 
     def checksum(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[int]:
+    ) -> tuple[int, ...]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
         :param from_time_stamp: unix timestamp
         :param until_time_stamp: unix timestamp
         :return: tuple[int]
         """
-        names_checksums = self.names.checksum(
-            from_time_stamp=from_time_stamp, until_time_stamp=until_time_stamp
-        )
-        total = 0
+        results = []
 
         for name in self.registers:
-            ts = self.registers[name].last_update
+            latest = self.registers[name].last_update
             if from_time_stamp is not None:
-                if self.clock.is_later(from_time_stamp, ts):
+                if self.clock.is_later(from_time_stamp, latest):
                     continue
             if until_time_stamp is not None:
-                if self.clock.is_later(ts, until_time_stamp):
+                if self.clock.is_later(latest, until_time_stamp):
                     continue
-            total += 1
+            results.append(self.registers[name].checksum()[0])
 
-        return total
+        return tuple(results)
 
     def history(
         self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
@@ -677,26 +616,6 @@ class LastWriterWinsMap(CRDT):
                 )
 
         return tuple(history)
-
-    def get_merkle_history(self) -> list[bytes | list[bytes] | dict[bytes, bytes]]:
-        """
-        Get a history as merkle tree for the Updates of the form [root, [content_id for update in self.history()], {
-        content_id: packed for update in self.history()}] where packed is the result of update.pack() and content_id
-        is the sha256 of the packed update.
-        :return: list[bytes, list[bytes], dict[bytes, bytes]]
-        """
-        return get_merkle_tree(self)
-
-    def resolve_merkle_histories(
-        self, history: list[bytes, list[bytes]]
-    ) -> list[bytes]:
-        """
-        Accept a history of form [root, leaves] from another node.  Return the leaves that
-        need to be resolved and merged for synchronization.
-        :param history: list[bytes, list[bytes]]
-        :return: list[bytes]
-        """
-        return resolve_merkle_tree(self, tree=history)
 
     def set(self, name: Hashable, value: Hashable, writer: Hashable) -> Update:
         """
@@ -901,7 +820,7 @@ class CRDTList(Generic[T]):
         self.hardware.set(index, value, hash(value))
 
     def __iter__(self) -> Iterable[T]:
-        for _, item in self.hardware.read():
+        for _, item in self.hardware.read().items():
             yield item
 
     def __next__(self) -> T:
