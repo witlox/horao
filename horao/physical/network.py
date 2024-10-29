@@ -12,10 +12,10 @@ from typing import List, Optional, TypeVar
 
 import networkx as nx  # type: ignore
 
-from horao.models.components import Hardware
-from horao.models.crdt import CRDTList, LastWriterWinsMap
-from horao.models.osi_layers import LinkLayer, Port
-from horao.models.status import DeviceStatus
+from horao.physical.hardware import Hardware
+from horao.physical.status import DeviceStatus
+from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
+from horao.conceptual.osi_layers import LinkLayer
 
 
 class NetworkTopology(Enum):
@@ -185,3 +185,22 @@ T = TypeVar("T", bound=NetworkDevice)
 class NetworkList(CRDTList[T]):
     def __init__(self, devices: List[T] = None, items: LastWriterWinsMap = None):
         super().__init__(devices, items)
+
+
+class Port(Hardware):
+    def __init__(
+        self,
+        serial_number: str,
+        name: str,
+        model: str,
+        number: int,
+        mac: str,
+        status: DeviceStatus,
+        connected: bool,
+        speed_gb: int,
+    ):
+        super().__init__(serial_number, name, model, number)
+        self.mac = mac
+        self.status = status
+        self.connected = connected
+        self.speed_gb = speed_gb

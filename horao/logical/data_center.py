@@ -7,42 +7,21 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import networkx as nx
 
-from . import DeviceStatus, Firewall, NetworkTopology, NetworkType, Port, Router
-from .components import Hardware, HardwareList
-from .composite import NIC, Blade, Chassis, ComputerList, Disk, Server
-from .crdt import LastWriterWinsMap
-from .decorators import instrument_class_function
-from .network import NetworkDevice, NetworkList, Switch
-
-
-class Cabinet(Hardware):
-    """A cabinet is a physical rack that hosts servers, chassis, and switches"""
-
-    def __init__(
-        self,
-        serial_number: str,
-        name: str,
-        model: str,
-        number: int,
-        servers: Optional[List[Server]],
-        chassis: Optional[List[Chassis]],
-        switches: Optional[List[Switch]],
-    ):
-        super().__init__(serial_number, name, model, number)
-        self.servers = ComputerList[Server](servers)
-        self.chassis = HardwareList[Chassis](chassis)
-        self.switches = NetworkList[Switch](switches)
-
-    def __copy__(self):
-        return Cabinet(
-            self.serial_number,
-            self.name,
-            self.model,
-            self.number,
-            list(iter(self.servers)),
-            list(iter(self.chassis)),
-            list(iter(self.switches)),
-        )
+from horao.conceptual.crdt import LastWriterWinsMap
+from horao.conceptual.decorators import instrument_class_function
+from horao.physical.composite import Cabinet, Server, Chassis, Blade
+from horao.physical.component import Disk
+from horao.physical.network import (
+    NIC,
+    NetworkType,
+    NetworkDevice,
+    Port,
+    Switch,
+    Router,
+    Firewall,
+    NetworkTopology,
+)
+from horao.physical.status import DeviceStatus
 
 
 class DataCenter:

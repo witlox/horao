@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-#
-from horao.rbac import Namespace, Permission, Permissions
+"""Role-based access control module for the application."""
+from horao.rbac.permission import Permissions, Namespace, Permission
 
 
 class NetworkEngineer(Permissions):

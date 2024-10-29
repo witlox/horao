@@ -18,8 +18,8 @@ from typing import (
     TypeVar,
 )
 
-from horao.models.decorators import instrument_class_function
-from horao.models.internal import CRDT, LogicalClock, Update, UpdateType
+from horao.conceptual.decorators import instrument_class_function
+from horao.conceptual.support import CRDT, LogicalClock, Update, UpdateType
 
 
 @dataclass

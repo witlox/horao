@@ -16,8 +16,6 @@ from starlette.routing import Route
 
 import horao.api
 import horao.auth
-import horao.controllers
-import horao.models
 
 
 from starlette.applications import Starlette  # type: ignore

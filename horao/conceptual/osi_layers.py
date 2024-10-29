@@ -3,14 +3,10 @@
 
 This module contains the definition of networking activities and their properties.
 We assume that these data structures are prone to change, given that these are configuration artifacts.
-OSI: https://en.wikipedia.org/wiki/OSI_model
 """
 from __future__ import annotations
 
 from enum import Enum, auto
-
-from horao.models.components import Hardware
-from horao.models.status import DeviceStatus
 
 
 class LinkLayer(Enum):
@@ -22,25 +18,6 @@ class Protocol(Enum):
     TCP = auto()
     UDP = auto()
     ICMP = auto()
-
-
-class Port(Hardware):
-    def __init__(
-        self,
-        serial_number: str,
-        name: str,
-        model: str,
-        number: int,
-        mac: str,
-        status: DeviceStatus,
-        connected: bool,
-        speed_gb: int,
-    ):
-        super().__init__(serial_number, name, model, number)
-        self.mac = mac
-        self.status = status
-        self.connected = connected
-        self.speed_gb = speed_gb
 
 
 class IpAddress:

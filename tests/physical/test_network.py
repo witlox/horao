@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-#
 import os
 
-from horao.models import (
-    NIC,
-    Cabinet,
-    DataCenter,
-    DataCenterNetwork,
-    DeviceStatus,
-    LinkLayer,
+from horao.conceptual.osi_layers import LinkLayer
+from horao.logical.data_center import DataCenterNetwork, DataCenter
+from horao.physical.composite import Cabinet
+from horao.physical.computer import Server
+from horao.physical.network import (
+    NetworkTopology,
+    NetworkType,
+    SwitchType,
     Port,
-    Server,
     Switch,
+    NIC,
 )
-from horao.models.network import NetworkTopology, NetworkType, SwitchType
+from horao.physical.status import DeviceStatus
 
 os.environ["ENVIRONMENT"] = "development"
 

@@ -1,4 +1,4 @@
-from horao.models.internal import LogicalClock, Update
+from horao.conceptual.support import LogicalClock
 
 
 def test_scalar_clock_read_changes_only_after_update():

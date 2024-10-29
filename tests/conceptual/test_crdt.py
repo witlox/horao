@@ -1,11 +1,11 @@
 from itertools import permutations
 
-from horao.models.crdt import (
+from horao.conceptual.crdt import (
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
 )
-from horao.models.internal import LogicalClock, Update
+from horao.conceptual.support import LogicalClock, Update
 
 
 def test_lww_register_read_returns_value():

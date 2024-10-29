@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-#
-"""Composite hardware models, e.g. servers, blades, nodes, etc."""
+"""Various types of computers and their properties"""
 from __future__ import annotations
 
 from abc import ABC
 from typing import List, Optional, TypeVar
 
-from horao.models.components import CPU, RAM, Accelerator, Disk, Hardware, HardwareList
-from horao.models.crdt import CRDTList, LastWriterWinsMap
-from horao.models.network import NIC, DeviceStatus
+from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
+from horao.physical.component import CPU, RAM, Disk, Accelerator
+from horao.physical.hardware import HardwareList, Hardware
+from horao.physical.network import NIC
+from horao.physical.status import DeviceStatus
 
 
 class Computer(ABC):
@@ -134,87 +136,6 @@ class Module(Server):
             disks,
             accelerators,
             status,
-        )
-
-
-class Node(Hardware):
-    """A node is a physical container that can host multiple modules"""
-
-    def __init__(
-        self,
-        serial_number: str,
-        name: str,
-        model: str,
-        number: int,
-        modules: Optional[List[Module]],
-        status: DeviceStatus,
-    ):
-        super().__init__(serial_number, name, model, number)
-        self.modules = ComputerList[Module](modules)
-        self.status = status
-
-    def __copy__(self):
-        return Node(
-            self.serial_number,
-            self.name,
-            self.model,
-            self.number,
-            list(iter(self.modules)),
-            self.status,
-        )
-
-
-class Blade(Hardware):
-    """A blade is a physical container that can host one or multiple nodes"""
-
-    def __init__(
-        self,
-        serial_number: str,
-        name: str,
-        model: str,
-        number: int,
-        nodes: Optional[List[Node]],
-        status: DeviceStatus,
-    ):
-        super().__init__(serial_number, name, model, number)
-        self.nodes = HardwareList[Node](nodes)
-        self.status = status
-
-    def __copy__(self):
-        return Blade(
-            self.serial_number,
-            self.name,
-            self.model,
-            self.number,
-            list(iter(self.nodes)),
-            self.status,
-        )
-
-
-class Chassis(Hardware):
-    """A chassis hosts servers and/or blades"""
-
-    def __init__(
-        self,
-        serial_number: str,
-        name: str,
-        model: str,
-        number: int,
-        servers: Optional[List[Server]],
-        blades: Optional[List[Blade]],
-    ):
-        super().__init__(serial_number, name, model, number)
-        self.servers = ComputerList[Server](servers)
-        self.blades = HardwareList[Blade](blades)
-
-    def __copy__(self):
-        return Chassis(
-            self.serial_number,
-            self.name,
-            self.model,
-            self.number,
-            list(iter(self.servers)),
-            list(iter(self.blades)),
         )
 
 
