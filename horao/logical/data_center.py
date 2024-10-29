@@ -251,40 +251,33 @@ class DataCenterNetwork:
         self.name = name
         self.network_type = network_type
         self.hsn = high_speed_network
-        self._computers: Dict[NetworkDevice, Computer] = {}
 
     @instrument_class_function(name="add", level=logging.DEBUG)
-    def add(
-        self, network_device: NetworkDevice, computer: Optional[Computer] = None
-    ) -> None:
+    def add(self, network_device: NetworkDevice | Computer) -> None:
         """
         Add a network device to the network
         :param network_device: device to add
-        :param computer: computer to add if NIC is attached to a computer
         :return: None
         """
         self.graph.add_node(network_device)
-        self._computers[network_device] = computer
 
-    def add_multiple(
-        self, network_devices: List[(NetworkDevice, Optional[Computer])]
-    ) -> None:
+    def add_multiple(self, network_devices: List[NetworkDevice]) -> None:
         """
         Add multiple network devices to the network at once
         :param network_devices: list of network devices
         :return: None
         """
-        devices, computers = zip(*network_devices)
-        for i in range(0, len(devices)):
-            self.add(devices[i], computers[i])
+        for device in network_devices:
+            self.add(device)
 
     @instrument_class_function(name="link", level=logging.DEBUG)
-    def link(self, left: NetworkDevice, right: NetworkDevice) -> None:
+    def link(self, left: NetworkDevice, right: NetworkDevice | Computer) -> None:
         """
         Link two network devices, if they are switches, they are connected via uplink ports, if they are routers or
         firewalls, they are connected via lan ports. We use 'the first' lan port if no uplink ports are available. We
         currently do not keep count of port usage. There is currently no explicit link that is tracked for the
-        connection, we 'simply' pick the first available port.
+        connection, we 'simply' pick the first available port. For computers we iterate through the NICs to find the
+        first available port.
         :param left: device (if uplink ports exist, they are used to connect to other devices)
         :param right: device (lan ports are used to connect to other devices)
         :return: None
@@ -308,7 +301,13 @@ class DataCenterNetwork:
             raise ValueError(
                 f"No free ports available on {left.name} ({left.number}:{left.serial_number})"
             )
-        right_port = next(iter([r for r in right.ports if not r.connected]), None)
+        if isinstance(right, NetworkDevice):
+            right_port = next(iter([r for r in right.ports if not r.connected]), None)
+        else:
+            # we assume that if it isn't a network device, it is a computer
+            right_port = next(
+                iter([r for n in right.nics for r in n.ports if not r.connected]), None
+            )
         if not right_port:
             raise ValueError(
                 f"No free ports available on {right.name} ({right.number}:{right.serial_number})"
@@ -316,13 +315,28 @@ class DataCenterNetwork:
         link_free_ports(left_port, right_port)
 
     @instrument_class_function(name="unlink", level=logging.DEBUG)
-    def unlink(self, left: NetworkDevice, right: NetworkDevice) -> None:
+    def unlink(self, left: NetworkDevice, right: NetworkDevice | Computer) -> None:
+        """
+        Unlink two network devices, if the device is composed of multiple ports, we
+        assume that the first connected port needs disconnecting. For computers we
+        iterate through all nics to find the first connected port.
+        :param left: network device
+        :param right: network device or computer
+        :return: None
+        :raises ValueError: if no connected ports are available on either device
+        """
         self.graph.remove_edge(left, right)
         if isinstance(left, Switch) and left.uplink_ports and any(left.uplink_ports):
             left_port = next(iter([l for l in left.uplink_ports if l.connected]), None)
         else:
             left_port = next(iter([l for l in left.ports if l.connected]), None)
-        right_port = next(iter([r for r in right.ports if r.connected]), None)
+        if isinstance(right, NetworkDevice):
+            right_port = next(iter([r for r in right.ports if r.connected]), None)
+        else:
+            # we assume that if it isn't a network device, it is a computer
+            right_port = next(
+                iter([r for n in right.nics for r in n.ports if r.connected]), None
+            )
         if not left_port or not right_port:
             raise ValueError(
                 f"could not determine connected ports for {left.name} and {right.name}"
@@ -333,19 +347,24 @@ class DataCenterNetwork:
         right_port.status = DeviceStatus.Down
 
     @instrument_class_function(name="toggle", level=logging.DEBUG)
-    def toggle(self, device: NetworkDevice) -> None:
-        n: NetworkDevice
+    def toggle(self, device: NetworkDevice | Computer) -> None:
+        """
+        Toggle the status of a device and all connected ports
+        :param device: network device or computer
+        :return: None
+        """
+        n: NetworkDevice | Computer
         for n in self.graph.neighbors(device):
             if isinstance(n, Switch) and n.uplink_ports and any(n.uplink_ports):
                 left_port = next(iter([l for l in n.uplink_ports if l.connected]), None)
+            elif isinstance(n, Computer):
+                left_port = next(
+                    iter([l for ni in n.nics for l in ni if l.connected]), None
+                )
             else:
                 left_port = next(iter([l for l in n.ports if l.connected]), None)
             if left_port:
                 left_port.status = DeviceStatus.Down
-            else:
-                logging.warning(
-                    f"could not determine connected port for {n.name} to {device.name}"
-                )
         for port in device.ports:
             port.status = (
                 DeviceStatus.Down if port.status == DeviceStatus.Up else DeviceStatus.Up
@@ -389,6 +408,14 @@ class DataCenterNetwork:
                         if port.status == DeviceStatus.Up
                         else DeviceStatus.Up
                     )
+        elif isinstance(device, Computer):
+            for nic in device.nics:
+                for port in nic:
+                    port.status = (
+                        DeviceStatus.Down
+                        if port.status == DeviceStatus.Up
+                        else DeviceStatus.Up
+                    )
 
     def get_topology(self) -> NetworkTopology:
         """
@@ -403,7 +430,7 @@ class DataCenterNetwork:
         return list(self.graph.nodes)
 
     def computers(self) -> List[Computer]:
-        return list(self._computers.values())
+        return [n for n in self.graph.nodes if isinstance(n, Computer)]
 
     def is_hsn(self) -> bool:
         return self.hsn

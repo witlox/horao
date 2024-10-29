@@ -95,10 +95,10 @@ def initialize():
     dc = DataCenter("dc", 1)
     dc[1] = [Cabinet("1", "1", "1", 1, [server1, server2], [], [core_switch])]
     dcn.add(core_switch)
-    dcn.add(server1.nics[0], server1)
-    dcn.add(server2.nics[0], server2)
-    dcn.link(core_switch, server1.nics[0])
-    dcn.link(core_switch, server2.nics[0])
+    dcn.add(server1)
+    dcn.add(server2)
+    dcn.link(core_switch, server1)
+    dcn.link(core_switch, server2)
     return dc, dcn
 
 
@@ -106,7 +106,7 @@ def test_basic_scheduler_infrastructure_limits():
     dc, dcn = initialize()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
     scheduler = BasicScheduler(infrastructure)
-    assert scheduler._get_infrastructure_limits() == (8, 48, 0, 0)
+    assert scheduler._get_infrastructure_limits() == (16, 96, 0, 0)
 
 
 def test_extract_claim_details():
@@ -180,7 +180,7 @@ def test_basic_scheduler_raises_error_filling_infrastructure():
         start,
         datetime.now() + timedelta(days=1),
         owner,
-        [Compute(4, 4, False, 1)],
+        [Compute(8, 4, False, 1)],
         False,
     )
     claim2 = Reservation(
@@ -188,7 +188,7 @@ def test_basic_scheduler_raises_error_filling_infrastructure():
         start,
         datetime.now() + timedelta(days=1),
         owner,
-        [Compute(4, 4, False, 1)],
+        [Compute(8, 8, False, 1)],
         False,
     )
     claim3 = Reservation(
@@ -196,7 +196,7 @@ def test_basic_scheduler_raises_error_filling_infrastructure():
         start,
         datetime.now() + timedelta(days=1),
         owner,
-        [Compute(4, 4, False, 1)],
+        [Compute(8, 16, False, 1)],
         False,
     )
     assert scheduler.schedule(claim1, tenant) == start
@@ -219,7 +219,7 @@ def test_claim_is_scheduled_when_enough_capacity_exists_in_time():
         start,
         end,
         owner,
-        [Compute(8, 4, False, 1)],
+        [Compute(16, 4, False, 1)],
         False,
     )
     claim2 = Reservation(
@@ -227,7 +227,7 @@ def test_claim_is_scheduled_when_enough_capacity_exists_in_time():
         None,
         end + timedelta(hours=1),
         owner,
-        [Compute(8, 4, False, 1)],
+        [Compute(16, 24, False, 1)],
         False,
     )
     assert scheduler.schedule(claim1, tenant) == start

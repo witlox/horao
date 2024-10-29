@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-#
 """Decorator functions for the application model implementation."""
+import inspect
 import logging
 from functools import wraps
 

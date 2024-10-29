@@ -113,7 +113,7 @@ def test_network_topology_detection_tree():
     #   leaf        leaf
     # Test the network topology detection
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
-    dcn.add_multiple([(core, None), (leaf_left, None), (leaf_right, None)])
+    dcn.add_multiple([core, leaf_left, leaf_right])
     dcn.link(leaf_left, core)
     dcn.link(leaf_right, core)
     assert dcn.get_topology() == NetworkTopology.Tree
@@ -121,7 +121,7 @@ def test_network_topology_detection_tree():
 
 def test_link_server_to_switch_ports_up_unlink_downs():
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
-    dcn.add_multiple([(core, None), (leaf_left, None), (leaf_right, None)])
+    dcn.add_multiple([core, leaf_left, leaf_right])
     dc = DataCenter("dc", 1)
     dc[1] = [
         Cabinet(

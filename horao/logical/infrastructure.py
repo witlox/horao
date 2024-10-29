@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple, Optional
 
 from horao.conceptual.decorators import instrument_class_function
 from horao.conceptual.tenant import Constraint, Tenant
@@ -17,18 +16,27 @@ from horao.physical.network import NetworkType
 from horao.physical.storage import StorageClass, StorageType
 
 
-@dataclass
 class LogicalInfrastructure:
     """
     Represents the logical infrastructure of a data center.
     Behaves as a dictionary of data center to list of data center networks.
     """
 
-    infrastructure: Dict[DataCenter, List[DataCenterNetwork]] = field(
-        default_factory=dict
-    )
-    constraints: Dict[Tenant, Constraint] = field(default_factory=dict)
-    claims: List[Claim] = field(default_factory=list)
+    def __init__(
+        self,
+        infrastructure: Optional[Dict[DataCenter, List[DataCenterNetwork]]] = None,
+        constraints: Optional[Dict[Tenant, Constraint]] = None,
+        claims: Optional[List[Claim]] = None,
+    ) -> None:
+        """
+        Initialize the logical infrastructure
+        :param infrastructure: dictionary of data center to list of data center networks
+        :param constraints: dictionary of tenant to constraints
+        :param claims: list of claims
+        """
+        self.infrastructure = infrastructure or {}
+        self.constraints = constraints or {}
+        self.claims = claims or []
 
     def clear(self) -> None:
         self.infrastructure.clear()
