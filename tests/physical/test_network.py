@@ -2,16 +2,16 @@
 import os
 
 from horao.conceptual.osi_layers import LinkLayer
-from horao.logical.data_center import DataCenterNetwork, DataCenter
+from horao.logical.data_center import DataCenter, DataCenterNetwork
 from horao.physical.composite import Cabinet
 from horao.physical.computer import Server
 from horao.physical.network import (
+    NIC,
     NetworkTopology,
     NetworkType,
-    SwitchType,
     Port,
     Switch,
-    NIC,
+    SwitchType,
 )
 from horao.physical.status import DeviceStatus
 
@@ -113,7 +113,7 @@ def test_network_topology_detection_tree():
     #   leaf        leaf
     # Test the network topology detection
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
-    dcn.add_multiple([core, leaf_left, leaf_right])
+    dcn.add_multiple([(core, None), (leaf_left, None), (leaf_right, None)])
     dcn.link(leaf_left, core)
     dcn.link(leaf_right, core)
     assert dcn.get_topology() == NetworkTopology.Tree
@@ -121,7 +121,7 @@ def test_network_topology_detection_tree():
 
 def test_link_server_to_switch_ports_up_unlink_downs():
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
-    dcn.add_multiple([core, leaf_left, leaf_right])
+    dcn.add_multiple([(core, None), (leaf_left, None), (leaf_right, None)])
     dc = DataCenter("dc", 1)
     dc[1] = [
         Cabinet(
@@ -190,7 +190,7 @@ def test_downing_switch_downs_all_ports():
         DeviceStatus.Up,
     )
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
-    dcn.add_multiple([switch, server])
+    dcn.add_multiple([(switch, None), (server, server)])
     dcn.link(server_nic, switch)
     assert switch_port.status == DeviceStatus.Up
     assert server_nic_port.status == DeviceStatus.Up

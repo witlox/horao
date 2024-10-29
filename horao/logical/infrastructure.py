@@ -6,15 +6,15 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Tuple
 
+from horao.conceptual.decorators import instrument_class_function
+from horao.conceptual.tenant import Constraint, Tenant
+from horao.logical.claim import Claim
 from horao.logical.data_center import DataCenter, DataCenterNetwork
 from horao.logical.resource import Compute, Storage
-from horao.logical.claim import Claim
-from horao.conceptual.tenant import Tenant, Constraint
-from horao.conceptual.decorators import instrument_class_function
-from horao.physical.computer import Server
 from horao.physical.composite import Blade
-from horao.physical.storage import StorageType, StorageClass
+from horao.physical.computer import Server
 from horao.physical.network import NetworkType
+from horao.physical.storage import StorageClass, StorageType
 
 
 @dataclass
@@ -101,7 +101,7 @@ class LogicalInfrastructure:
             if hsn_only:
                 data_networks = [n for n in data_networks if n.hsn]
             for network in data_networks:
-                for node in network.nodes():
+                for node in network.computers():
                     if isinstance(node, Server):
                         compute.append(
                             Compute(
@@ -137,7 +137,7 @@ class LogicalInfrastructure:
             if hsn_only:
                 data_networks = [n for n in data_networks if n.hsn]
             for network in data_networks:
-                for node in network.nodes():
+                for node in network.computers():
                     if isinstance(node, Server):
                         storage.append(
                             Storage(

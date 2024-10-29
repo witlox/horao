@@ -9,17 +9,18 @@ import networkx as nx
 
 from horao.conceptual.crdt import LastWriterWinsMap
 from horao.conceptual.decorators import instrument_class_function
-from horao.physical.composite import Cabinet, Server, Chassis, Blade
 from horao.physical.component import Disk
+from horao.physical.composite import Blade, Cabinet, Chassis, Server
+from horao.physical.computer import Computer
 from horao.physical.network import (
     NIC,
-    NetworkType,
-    NetworkDevice,
-    Port,
-    Switch,
-    Router,
     Firewall,
+    NetworkDevice,
     NetworkTopology,
+    NetworkType,
+    Port,
+    Router,
+    Switch,
 )
 from horao.physical.status import DeviceStatus
 
@@ -250,24 +251,32 @@ class DataCenterNetwork:
         self.name = name
         self.network_type = network_type
         self.hsn = high_speed_network
+        self._computers: Dict[NetworkDevice, Computer] = {}
 
     @instrument_class_function(name="add", level=logging.DEBUG)
-    def add(self, network_device: NetworkDevice) -> None:
+    def add(
+        self, network_device: NetworkDevice, computer: Optional[Computer] = None
+    ) -> None:
         """
         Add a network device to the network
         :param network_device: device to add
+        :param computer: computer to add if NIC is attached to a computer
         :return: None
         """
         self.graph.add_node(network_device)
+        self._computers[network_device] = computer
 
-    def add_multiple(self, network_devices: List[NetworkDevice]) -> None:
+    def add_multiple(
+        self, network_devices: List[(NetworkDevice, Optional[Computer])]
+    ) -> None:
         """
         Add multiple network devices to the network at once
         :param network_devices: list of network devices
         :return: None
         """
-        for network_device in network_devices:
-            self.add(network_device)
+        devices, computers = zip(*network_devices)
+        for i in range(0, len(devices)):
+            self.add(devices[i], computers[i])
 
     @instrument_class_function(name="link", level=logging.DEBUG)
     def link(self, left: NetworkDevice, right: NetworkDevice) -> None:
@@ -392,6 +401,9 @@ class DataCenterNetwork:
 
     def nodes(self) -> List[NetworkDevice]:
         return list(self.graph.nodes)
+
+    def computers(self) -> List[Computer]:
+        return list(self._computers.values())
 
     def is_hsn(self) -> bool:
         return self.hsn
