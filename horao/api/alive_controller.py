@@ -17,5 +17,5 @@ async def is_alive(request: Request) -> JSONResponse:
       403:
         description: Unauthorized
     """
-    logging.info(f"Calling Keep Alive ({request})")
+    logging.debug(f"Calling Keep Alive ({request})")
     return JSONResponse(status_code=200, content={"status": "is alive"})

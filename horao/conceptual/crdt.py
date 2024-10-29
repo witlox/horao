@@ -22,20 +22,41 @@ from horao.conceptual.decorators import instrument_class_function
 from horao.conceptual.support import CRDT, LogicalClock, Update, UpdateType
 
 
-@dataclass
 class ObservedRemovedSet(CRDT):
     """
     Observed Removed Set (ORSet) CRDT. Comprised of two Sets with a read method that removes the removed set members
     from the observed set. Add-biased.
     """
 
-    observed: Set[Hashable] = field(default_factory=set)
-    observed_metadata: Dict[Hashable, Update] = field(default_factory=dict)
-    removed: Set[Hashable] = field(default_factory=set)
-    removed_metadata: Dict[Hashable, Update] = field(default_factory=dict)
-    clock: LogicalClock = field(default_factory=LogicalClock)
-    cache: Optional[Tuple] = field(default=None)
-    listeners: List[Callable] = field(default_factory=list)
+    def __init__(
+        self,
+        observed: Set[Hashable] = None,
+        observed_metadata: Dict[Hashable, Update] = None,
+        removed: Set[Hashable] = None,
+        removed_metadata: Dict[Hashable, Update] = None,
+        clock: LogicalClock = None,
+        cache: Optional[Tuple] = None,
+        listeners: List[Callable] = None,
+    ) -> None:
+        """
+        Initialize the ObservedRemovedSet.
+        :param observed: observed elements of set
+        :param observed_metadata: elements plus metadata
+        :param removed: removed elements of set
+        :param removed_metadata: elements plus metadata
+        :param clock: logical clock for synchronization
+        :param cache: previous state
+        :param listeners: callable
+        """
+        self.observed = observed if observed else set()
+        self.observed_metadata = observed_metadata if observed_metadata else {}
+        self.removed: Set[Hashable] = removed if removed else set()
+        self.removed_metadata: Dict[Hashable, Update] = (
+            removed_metadata if removed_metadata else {}
+        )
+        self.clock: LogicalClock = clock if clock else LogicalClock()
+        self.cache: Optional[Tuple] = cache
+        self.listeners: List[Callable] = listeners if listeners else []
 
     def read(self) -> set[Hashable]:
         """
@@ -249,21 +270,14 @@ class ObservedRemovedSet(CRDT):
 class LastWriterWinsRegister(CRDT):
     """Implements the Last Writer Wins Register CRDT."""
 
-    name: Hashable
-    value: Hashable
-    clock: LogicalClock
-    last_update: Any
-    last_writer: Hashable
-    listeners: list[Callable]
-
     def __init__(
         self,
         name: Hashable,
-        value: Hashable = None,
-        clock: LogicalClock = None,
-        last_update: float = None,
-        last_writer: Hashable = None,
-        listeners: list[Callable] = None,
+        value: Optional[Hashable] = None,
+        clock: Optional[LogicalClock] = None,
+        last_update: Optional[float] = None,
+        last_writer: Optional[Hashable] = None,
+        listeners: Optional[list[Callable]] = None,
     ) -> None:
         """
         LastWriterWinsRegister from a name, a value, and a shared clock.
@@ -429,15 +443,11 @@ class LastWriterWinsRegister(CRDT):
 class LastWriterWinsMap(CRDT):
     """Last Writer Wins Map CRDT."""
 
-    names: ObservedRemovedSet
-    registers: Dict[Hashable, LastWriterWinsRegister]
-    listeners: List[Callable]
-
     def __init__(
         self,
-        names: ObservedRemovedSet = None,
-        registers: Dict = None,
-        listeners: List[Callable] = None,
+        names: Optional[ObservedRemovedSet] = None,
+        registers: Optional[Dict[Hashable, LastWriterWinsRegister]] = None,
+        listeners: Optional[List[Callable]] = None,
     ) -> None:
         """
         Initialize an LastWriterWinsMap from an ObservedRemovedSet of names, a dict mapping
@@ -683,6 +693,21 @@ class LastWriterWinsMap(CRDT):
         for listener in self.listeners:
             listener(state_update)
 
+    def __eq__(self, other: LastWriterWinsMap) -> bool:
+        other_names = other.names.read()
+        for name in self.names.read():
+            if name not in other_names:
+                return False
+        for name in self.registers:
+            if name not in other.registers:
+                return False
+            if self.registers[name].read() != other.registers[name].read():
+                return False
+        return True
+
+    def __ne__(self, other: LastWriterWinsMap) -> bool:
+        return not self == other
+
 
 T = TypeVar("T", bound=CRDT)
 
@@ -691,7 +716,9 @@ class CRDTList(Generic[T]):
     """CRDTList behaves as a list of instances T that can be updated concurrently."""
 
     def __init__(
-        self, content: List[T] = None, items: LastWriterWinsMap = None
+        self,
+        content: Optional[List[T]] = None,
+        items: Optional[LastWriterWinsMap] = None,
     ) -> None:
         """
         Initialize from an LastWriterWinsMap of item positions and a shared clock if supplied otherwise default.

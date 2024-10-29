@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, auto
 from hashlib import sha256
+from os import environ
 from typing import Any, Callable, Hashable, Optional, Protocol, Tuple, runtime_checkable
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ class LogicalClock:
 
     time_stamp: float = field(default=datetime.timestamp(datetime.now(tz=timezone.utc)))
     uuid: bytes = field(default_factory=lambda: uuid4().bytes)
+    offset: float = environ.get("TIME_OFFSET", 0.0)
 
     def read(self) -> float:
         """
@@ -32,30 +34,33 @@ class LogicalClock:
         self.time_stamp = datetime.timestamp(datetime.now(tz=timezone.utc))
         return self.time_stamp
 
-    @staticmethod
-    def is_later(time_stamp: float, other_time_stamp: float) -> bool:
+    def is_later(self, time_stamp: float, other_time_stamp: float) -> bool:
         """
         Compare two timestamps, True if time_stamp > other_time_stamp.
         :param time_stamp: unix timestamp
         :param other_time_stamp: unix timestamp
         :return: bool
         """
-        return time_stamp > other_time_stamp
+        if self.offset == 0.0:
+            return time_stamp > other_time_stamp
+        return time_stamp - other_time_stamp > self.offset
 
-    @staticmethod
-    def are_concurrent(time_stamp: float, other_time_stamp: float) -> bool:
+    def are_concurrent(self, time_stamp: float, other_time_stamp: float) -> bool:
         """
         Compare two timestamps, True if not time_stamp > other_time_stamp and not other_time_stamp > time_stamp.
         :param time_stamp: unix timestamp
         :param other_time_stamp: unix timestamp
         :return: bool
         """
-        return not (time_stamp > other_time_stamp) and not (
-            other_time_stamp > time_stamp
+        if self.offset == 0.0:
+            return not (time_stamp > other_time_stamp) and not (
+                other_time_stamp > time_stamp
+            )
+        return not (time_stamp - other_time_stamp > self.offset) and not (
+            other_time_stamp - time_stamp > self.offset
         )
 
-    @staticmethod
-    def compare(time_stamp: float, other_time_stamp: float) -> int:
+    def compare(self, time_stamp: float, other_time_stamp: float) -> int:
         """
         Compare two timestamps, returns 1 if time_stamp is later than other_time_stamp; -1 if other_time_stamp is later than
         time_stamp; and 0 if they are concurrent/incomparable.
@@ -63,14 +68,28 @@ class LogicalClock:
         :param other_time_stamp: unix timestamp
         :return: int
         """
-        if time_stamp > other_time_stamp:
+        if self.offset == 0.0:
+            if time_stamp > other_time_stamp:
+                return 1
+            elif other_time_stamp > time_stamp:
+                return -1
+            return 0
+        if time_stamp - other_time_stamp > self.offset:
             return 1
-        elif other_time_stamp > time_stamp:
+        elif other_time_stamp - time_stamp > self.offset:
             return -1
         return 0
 
+    def __eq__(self, other: LogicalClock) -> bool:
+        if self.offset == 0.0:
+            return self.time_stamp == other.time_stamp and self.uuid == other.uuid
+        return (
+            abs(self.time_stamp - other.time_stamp) < self.offset
+            and self.uuid == other.uuid
+        )
+
     def __repr__(self) -> str:
-        return f"ScalarClock(time_stamp={self.time_stamp}, uuid={self.uuid.hex()})"
+        return f"LogicalClock(time_stamp={self.time_stamp}, uuid={self.uuid.hex()})"
 
 
 class UpdateType(Enum):

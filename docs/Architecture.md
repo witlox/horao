@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-There are 2 levels of abstraction in the architecture of HORAO:
+There are 2 levels of abstraction in the architecture of `HORAO`:
 1. The high-level architecture which describes rough overall state of a 'logical infrastructure'. 
 A logical infrastructure is a logical aggregation of lower level resources for potentially multiple datacenters.
 With this logical infrastructure, one should be able to schedule resource and/or maintenance claims for resource profiles.
@@ -12,13 +12,18 @@ The intent is that there are 3 rough dimension of any given datacenter; network,
 
 # Distribution pattern
 In order to aggregate the lower level resources into a logical infrastructure, we assume that any
-instance of HORAO will have all information eventually. We will leverage CRDTs to ensure consistency
-across all instances of HORAO. For the data center resources we will use fractionally-indexed arrays,
-for the logical infrastructure we will use a Multi-Value Map.
+instance of `HORAO` will have all information eventually. We will leverage CRDTs to ensure consistency
+across all instances of `HORAO`. The main CRDT datastructure we leverage is Last-Writer-Wins Map (LWWMap).
+The LWWMap internally uses Last-Writer-Wins register (LWWRegister) to ensure consistent key-value pairs.
+The internal synchronization mechanism of the CRDTs is based on a Lamport Logical Clock, this clock uses
+a vector based on unix timestamps to ensure that the order of operations is consistent across all instances.
+When running multiple instances of `HORAO` we will synchronize the state of the CRDTs using the API.
+Because we are using an actual clock, it is important to ensure that the clocks are synchronized across all instances.
+We recommend to use NTP to synchronize the clocks, and if needed one can set an allowed clock-offset.
 
 ## Synchronization and backup
 Because of the nature of the design, split-brain situations should not exist. 
-We will synchronize state via a gossip protocol (over websockets in starlette).
+We will synchronize state via the `HORAO` API (over websockets in starlette).
 Persistent storage will be provided by a key-value database (Redis).
 
 # Design assumptions

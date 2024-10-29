@@ -15,6 +15,7 @@ from starlette.responses import HTMLResponse
 from starlette.routing import Route
 
 import horao.api
+import horao.api.synchronization
 import horao.auth
 
 
@@ -24,7 +25,8 @@ from starlette.middleware.cors import CORSMiddleware  # type: ignore
 from starlette.schemas import SchemaGenerator  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 
-from horao.auth.basic_auth import BasicAuthBackend
+from horao.auth.basic_auth import BasicAuthBackend, PeerAuthBackend
+
 
 schemas = SchemaGenerator(
     {"openapi": "3.0.0", "info": {"title": "HORAO API", "version": "1.0"}}
@@ -60,6 +62,11 @@ def init_api() -> Starlette:
         logging.warning("CORS is set to *")
     routes = [
         Route("/ping", endpoint=horao.api.alive_controller.is_alive, methods=["GET"]),
+        Route(
+            "/synchronize",
+            endpoint=horao.api.synchronization.synchronize,
+            methods=["POST"],
+        ),
         Route("/openapi.json", endpoint=openapi_schema, include_in_schema=False),
     ]
     module_root = os.path.dirname(os.path.dirname(__file__))
@@ -70,6 +77,7 @@ def init_api() -> Starlette:
         routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
     middleware = [
         Middleware(CORSMiddleware, allow_origins=[cors]),
+        Middleware(AuthenticationMiddleware, backend=PeerAuthBackend()),
     ]
     if os.getenv("AUTH", "basic") == "basic":
         middleware.append(
