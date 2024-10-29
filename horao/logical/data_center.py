@@ -32,24 +32,17 @@ class DataCenter:
     The key is the row number, the value is a list of cabinets
     """
 
-    def __init__(
-        self,
-        name: str,
-        number: int,
-        rows: Dict[int, List[Cabinet]] = None,
-        items: LastWriterWinsMap = None,
-    ):
+    def __init__(self, name: str, number: int, rows: Dict[int, List[Cabinet]] = None):
         """
         Initialize a data center
         :param name: unique name
         :param number: unique number referring to potential AZ
         :param rows: optional dictionary of rows (number, list of cabinets)
-        :param items: optional injectable LastWriterWinsMap
         """
         self.log = logging.getLogger(__name__)
         self.name = name
         self.number = number
-        self.rows = LastWriterWinsMap(items)
+        self.rows = LastWriterWinsMap()
         if rows:
             for k, v in rows.items():
                 self.rows.set(k, v, hash(k))

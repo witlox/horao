@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 import redis
 
-from horao.persistance.serializable import HoraoDecoder, HoraoEncoder
+from horao.persistance.serialize import HoraoDecoder, HoraoEncoder
 
 
 class Store:
@@ -21,5 +21,4 @@ class Store:
     def save(self, key: str, value: Any):
         if hasattr(self, "redis"):
             self.redis.set(key, json.dumps(value, cls=HoraoEncoder))
-        else:
-            self.memory[key] = json.dumps(value, cls=HoraoEncoder)
+        self.memory[key] = json.dumps(value, cls=HoraoEncoder)

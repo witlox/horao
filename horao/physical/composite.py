@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from horao.physical.computer import Server, Module, ComputerList
+from horao.physical.computer import ComputerList, Module, Server
 from horao.physical.hardware import Hardware, HardwareList
-from horao.physical.network import DeviceStatus, Switch, NetworkList
+from horao.physical.network import NetworkList, Switch
 
 
 class Node(Hardware):
@@ -19,11 +19,9 @@ class Node(Hardware):
         model: str,
         number: int,
         modules: Optional[List[Module]],
-        status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
         self.modules = ComputerList[Module](modules)
-        self.status = status
 
     def __copy__(self):
         return Node(
@@ -32,7 +30,6 @@ class Node(Hardware):
             self.model,
             self.number,
             list(iter(self.modules)),
-            self.status,
         )
 
 
@@ -46,11 +43,9 @@ class Blade(Hardware):
         model: str,
         number: int,
         nodes: Optional[List[Node]],
-        status: DeviceStatus,
     ):
         super().__init__(serial_number, name, model, number)
         self.nodes = HardwareList[Node](nodes)
-        self.status = status
 
     def __copy__(self):
         return Blade(
@@ -59,7 +54,6 @@ class Blade(Hardware):
             self.model,
             self.number,
             list(iter(self.nodes)),
-            self.status,
         )
 
 

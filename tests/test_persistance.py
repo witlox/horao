@@ -24,6 +24,7 @@ def test_storing_loading_last_writer_wins_map():
     assert lww_map == loaded_lww_map
 
 
+# todo fix this
 # def test_storing_loading_logical_infrastructure():
 #     dc, dcn = initialize()
 #     infrastructure = LogicalInfrastructure({dc: [dcn]})
