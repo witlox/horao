@@ -12,10 +12,10 @@ from typing import List, Optional, TypeVar
 
 import networkx as nx  # type: ignore
 
-from horao.physical.hardware import Hardware
-from horao.physical.status import DeviceStatus
 from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
 from horao.conceptual.osi_layers import LinkLayer
+from horao.physical.hardware import Hardware
+from horao.physical.status import DeviceStatus
 
 
 class NetworkTopology(Enum):
@@ -95,8 +95,8 @@ class SwitchType(Enum):
 
 
 class NetworkDevice(Hardware):
-    def __init__(self, serial_number, name, model, number, ports: List[Port]):
-        super().__init__(serial_number, name, model, number)
+    def __init__(self, serial_number, model, number, ports: List[Port]):
+        super().__init__(serial_number, model, number)
         self.ports = ports
 
     def __eq__(self, other: NetworkDevice) -> bool:
@@ -116,10 +116,8 @@ class NetworkDevice(Hardware):
 
 
 class NIC(NetworkDevice):
-    def __init__(
-        self, serial_number: str, name: str, model: str, number: int, ports: List[Port]
-    ):
-        super().__init__(serial_number, name, model, number, ports)
+    def __init__(self, serial_number: str, model: str, number: int, ports: List[Port]):
+        super().__init__(serial_number, model, number, ports)
 
 
 class Firewall(NetworkDevice):
@@ -134,7 +132,8 @@ class Firewall(NetworkDevice):
         wan_ports: Optional[List[Port]],
     ):
 
-        super().__init__(serial_number, name, model, number, lan_ports)
+        super().__init__(serial_number, model, number, lan_ports)
+        self.name = name
         self.status = status
         self.wan_ports = wan_ports
 
@@ -151,7 +150,8 @@ class Router(NetworkDevice):
         lan_ports: List[Port],
         wan_ports: Optional[List[Port]],
     ):
-        super().__init__(serial_number, name, model, number, lan_ports)
+        super().__init__(serial_number, model, number, lan_ports)
+        self.name = name
         self.router_type = router_type
         self.status = status
         self.wan_ports = wan_ports
@@ -171,7 +171,8 @@ class Switch(NetworkDevice):
         lan_ports: List[Port],
         uplink_ports: Optional[List[Port]],
     ):
-        super().__init__(serial_number, name, model, number, lan_ports)
+        super().__init__(serial_number, model, number, lan_ports)
+        self.name = name
         self.layer = layer
         self.switch_type = switch_type
         self.status = status
@@ -191,7 +192,6 @@ class Port(Hardware):
     def __init__(
         self,
         serial_number: str,
-        name: str,
         model: str,
         number: int,
         mac: str,
@@ -199,7 +199,7 @@ class Port(Hardware):
         connected: bool,
         speed_gb: int,
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
         self.mac = mac
         self.status = status
         self.connected = connected

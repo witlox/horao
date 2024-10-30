@@ -6,6 +6,8 @@ import logging
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import networkx as nx
+from networkx.algorithms.traversal import bfs_edges
+from networkx.classes import Graph
 
 from horao.conceptual.crdt import LastWriterWinsMap
 from horao.conceptual.decorators import instrument_class_function
@@ -32,19 +34,26 @@ class DataCenter:
     The key is the row number, the value is a list of cabinets
     """
 
-    def __init__(self, name: str, number: int, rows: Dict[int, List[Cabinet]] = None):
+    def __init__(
+        self,
+        name: str,
+        number: int,
+        rows: LastWriterWinsMap = None,
+        items: Dict[int, List[Cabinet]] = None,
+    ) -> None:
         """
         Initialize a data center
         :param name: unique name
         :param number: unique number referring to potential AZ
-        :param rows: optional dictionary of rows (number, list of cabinets)
+        :param rows: optional LastWriterWinsMap of rows
+        :param items: optional dictionary of rows (number, list of cabinets)
         """
         self.log = logging.getLogger(__name__)
         self.name = name
         self.number = number
-        self.rows = LastWriterWinsMap()
-        if rows:
-            for k, v in rows.items():
+        self.rows = LastWriterWinsMap() if not rows else rows
+        if items:
+            for k, v in items.items():
                 self.rows.set(k, v, hash(k))
 
     def clear(self) -> None:
@@ -232,7 +241,8 @@ class DataCenterNetwork:
         self,
         name: str,
         network_type: NetworkType,
-        high_speed_network: Optional[bool] = False,
+        graph: Optional[Graph] = None,
+        high_speed_network: Optional[bool] = None,
     ) -> None:
         """
         Initialize a data center network
@@ -240,10 +250,16 @@ class DataCenterNetwork:
         :param network_type: type of network
         :param high_speed_network: this is a high speed, low latency network
         """
-        self.graph = nx.Graph()
+        self.graph = graph if graph else nx.Graph()
         self.name = name
         self.network_type = network_type
-        self.hsn = high_speed_network
+        self.hsn = high_speed_network if high_speed_network else False
+
+    def __eq__(self, other: DataCenterNetwork):
+        return self.name == other.name and self.network_type == other.network_type
+
+    def __hash__(self):
+        return hash((self.name, self.network_type))
 
     @instrument_class_function(name="add", level=logging.DEBUG)
     def add(self, network_device: NetworkDevice | Computer) -> None:
@@ -420,10 +436,57 @@ class DataCenterNetwork:
         return NetworkTopology.Undefined
 
     def nodes(self) -> List[NetworkDevice]:
+        """
+        Return all network devices in the network
+        :return: List of network devices
+        """
         return list(self.graph.nodes)
 
     def computers(self) -> List[Computer]:
+        """
+        Return all computers in the network
+        :return: List of Computer (Server or Module)
+        """
         return [n for n in self.graph.nodes if isinstance(n, Computer)]
 
     def is_hsn(self) -> bool:
+        """
+        Determine if the network is a high speed network
+        :return: bool
+        """
         return self.hsn
+
+    def links_from_graph(self, graph: Graph) -> None:
+        """
+        Add links from a hash representation graph to the network,
+        note that all network devices need to be present.
+        :param graph: graph with links
+        :return: None
+        :raises ValueError: if network devices are not present in the graph
+        """
+        for left, right in graph.edges():
+            left_node = next(
+                iter([n for n in self.graph.nodes if int(hash(n)) == int(left)]), None
+            )
+            right_node = next(
+                iter([n for n in self.graph.nodes if int(hash(n)) == int(right)]), None
+            )
+            if not left_node or not right_node:
+                raise ValueError("Could not find network devices in graph")
+            self.link(left_node, right_node)
+
+    def hash_graph(self) -> Optional[Graph]:
+        """
+        Generate a Graph without the actual objects, but with the hash of the objects
+        :return: graph or None if no nodes are present
+        """
+        if len(self.nodes()) == 0:
+            return None
+        graph = nx.Graph()
+        for left, right in self.graph.edges():
+            if hash(left) not in graph.nodes:
+                graph.add_node(hash(left))
+            if right not in graph.nodes:
+                graph.add_node(hash(right))
+            graph.add_edge(hash(left), hash(right))
+        return graph

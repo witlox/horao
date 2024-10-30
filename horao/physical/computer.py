@@ -6,8 +6,9 @@ from abc import ABC
 from typing import List, Optional, TypeVar
 
 from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
-from horao.physical.component import CPU, RAM, Disk, Accelerator
-from horao.physical.hardware import HardwareList, Hardware
+from horao.logical.resource import Compute
+from horao.physical.component import CPU, RAM, Accelerator, Disk
+from horao.physical.hardware import Hardware, HardwareList
 from horao.physical.network import NIC
 from horao.physical.status import DeviceStatus
 
@@ -48,30 +49,28 @@ class Computer(ABC):
             list(iter(self.accelerators)),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Computer) -> bool:
         """
         Compare two computers, note that names are assumed to be unique
         :param other: instance of Computer
         :return: bool
         """
-        if not isinstance(other, Hardware):
-            return False
         if self.serial_number != other.serial_number:
             return False
         if not self.name == other.name:
             return False
         return True
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         return not self.__eq__(other)
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         return self.number > other.number
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return self.number < other.number
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.serial_number)
 
 

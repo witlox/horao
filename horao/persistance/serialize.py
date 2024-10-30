@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-#
+"""Serialize and Deserialize Horao objects to JSON"""
 import json
 from datetime import date, datetime
+from multiprocessing.resource_tracker import register
+from typing import Any, Tuple
 
-from networkx.readwrite import json_graph
+from networkx.convert import from_dict_of_dicts, to_dict_of_dicts
 
 from horao.conceptual.crdt import (
-    CRDTList,
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
@@ -17,7 +19,7 @@ from horao.logical.infrastructure import LogicalInfrastructure
 from horao.physical.component import CPU, RAM, Accelerator, Disk
 from horao.physical.composite import Blade, Cabinet, Chassis, Node
 from horao.physical.computer import Module, Server
-from horao.physical.hardware import Hardware, HardwareList
+from horao.physical.hardware import HardwareList
 from horao.physical.network import (
     NIC,
     Firewall,
@@ -32,11 +34,19 @@ from horao.physical.status import DeviceStatus
 
 
 class HoraoEncoder(json.JSONEncoder):
+    """HoraoEncoder is a class that is used to serialize Horao objects to JSON"""
+
     def default(self, obj):
+        """
+        Serialize Horao objects to JSON.
+        Note that float NaN and Infinity are not supported.
+        :param obj: object to serialize
+        :return: JSON object
+        """
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
         if isinstance(obj, set):
-            return {"type": "Set", "content": list(obj)}
+            return {"type": "Set", "value": list(obj)}
         if isinstance(obj, LogicalClock):
             return {
                 "type": "LogicalClock",
@@ -45,74 +55,59 @@ class HoraoEncoder(json.JSONEncoder):
                 "offset": obj.offset,
             }
         if isinstance(obj, Update):
-            result = {
+            return {
                 "type": "Update",
                 "clock_uuid": obj.clock_uuid.hex(),
                 "time_stamp": obj.time_stamp,
+                "data": json.dumps(obj.data, cls=HoraoEncoder) if obj.data else None,
+                "update_type": obj.update_type.value,
+                "writer": obj.writer,
+                "name": obj.name,
             }
-            if obj.data:
-                result["data"] = obj.data
-            if obj.update_type:
-                result["update_type"] = obj.update_type.value
-            if obj.writer:
-                result["writer"] = obj.writer
-            if obj.name:
-                result["name"] = obj.name
-            return result
         if isinstance(obj, ObservedRemovedSet):
-            result = {
+            return {
                 "type": "ObservedRemovedSet",
+                "observed": json.dumps(obj.observed, cls=HoraoEncoder),
+                "observed_metadata": json.dumps(
+                    obj.observed_metadata, cls=HoraoEncoder
+                ),
+                "removed": json.dumps(obj.removed, cls=HoraoEncoder),
+                "removed_metadata": json.dumps(obj.removed_metadata, cls=HoraoEncoder),
+                "clock": json.dumps(obj.clock, cls=HoraoEncoder),
+                "listeners": json.dumps(obj.listeners, cls=HoraoEncoder),
             }
-            if obj.observed:
-                result["observed"] = obj.observed
-            if obj.observed_metadata:
-                result["observed_metadata"] = obj.observed_metadata
-            if obj.removed:
-                result["removed"] = obj.removed
-            if obj.removed_metadata:
-                result["removed_metadata"] = obj.removed_metadata
-            if obj.clock:
-                result["clock"] = obj.clock
-            if obj.listeners:
-                result["listeners"] = obj.listeners
-            return result
         if isinstance(obj, LastWriterWinsRegister):
-            result = {
+            return {
                 "type": "LastWriterWinsRegister",
-                "name": obj.name,
+                "name": json.dumps(obj.name, cls=HoraoEncoder),
+                "value": json.dumps(obj.value, cls=HoraoEncoder) if obj.clock else None,
+                "clock": json.dumps(obj.clock, cls=HoraoEncoder) if obj.clock else None,
+                "last_update": obj.last_update,
+                "last_writer": obj.last_writer,
+                "listeners": (
+                    json.dumps(obj.listeners, cls=HoraoEncoder)
+                    if obj.listeners
+                    else None
+                ),
             }
-            if obj.value:
-                result["value"] = obj.value
-            if obj.clock:
-                result["clock"] = obj.clock
-            if obj.last_update:
-                result["last_update"] = obj.last_update
-            if obj.last_writer:
-                result["last_writer"] = obj.last_writer
-            if obj.listeners:
-                result["listeners"] = obj.listeners
-            return result
         if isinstance(obj, LastWriterWinsMap):
-            result = {"type": "LastWriterWinsMap"}
-            if obj.names:
-                result["names"] = obj.names
+            result = {
+                "type": "LastWriterWinsMap",
+                "names": json.dumps(obj.names, cls=HoraoEncoder) if obj.names else None,
+                "listeners": (
+                    json.dumps(obj.listeners, cls=HoraoEncoder)
+                    if obj.listeners
+                    else None
+                ),
+            }
+            registers = {}
             if obj.registers:
-                result["registers"] = obj.registers
-            if obj.listeners:
-                result["listeners"] = obj.listeners
+                for k, v in obj.registers.items():
+                    registers[json.dumps(k, cls=HoraoEncoder)] = json.dumps(
+                        v, cls=HoraoEncoder
+                    )
+            result["registers"] = registers
             return result
-        if isinstance(obj, CRDTList):
-            return {
-                "type": "CRDTList",
-                "hardware": json.dumps(obj.hardware, cls=HoraoEncoder),
-            }
-        if isinstance(obj, Hardware):
-            return {
-                "serial_number": obj.serial_number,
-                "name": obj.name,
-                "model": obj.model,
-                "number": obj.number,
-            }
         if isinstance(obj, HardwareList):
             return {
                 "type": "HardwareList",
@@ -121,19 +116,18 @@ class HoraoEncoder(json.JSONEncoder):
         if isinstance(obj, Port):
             return {
                 "type": "Port",
-                "name": obj.name,
+                "serial_number": obj.serial_number,
                 "model": obj.model,
                 "number": obj.number,
                 "mac": obj.mac,
                 "status": obj.status.value,
-                "connected": obj.connected,
+                "connected": False,
                 "speed_gb": obj.speed_gb,
             }
         if isinstance(obj, NIC):
             return {
                 "type": "NIC",
                 "serial_number": obj.serial_number,
-                "name": obj.name,
                 "model": obj.model,
                 "number": obj.number,
                 "ports": json.dumps(obj.ports, cls=HoraoEncoder),
@@ -153,7 +147,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "uplink_ports": (
                     json.dumps(obj.uplink_ports, cls=HoraoEncoder)
                     if obj.uplink_ports
-                    else []
+                    else None
                 ),
             }
         if isinstance(obj, Router):
@@ -167,7 +161,9 @@ class HoraoEncoder(json.JSONEncoder):
                 "status": obj.status.value,
                 "lan_ports": json.dumps(obj.ports, cls=HoraoEncoder),
                 "wan_ports": (
-                    json.dumps(obj.wan_ports, cls=HoraoEncoder) if obj.wan_ports else []
+                    json.dumps(obj.wan_ports, cls=HoraoEncoder)
+                    if obj.wan_ports
+                    else None
                 ),
             }
         if isinstance(obj, Firewall):
@@ -180,7 +176,9 @@ class HoraoEncoder(json.JSONEncoder):
                 "status": obj.status.value,
                 "lan_ports": json.dumps(obj.ports, cls=HoraoEncoder),
                 "wan_ports": (
-                    json.dumps(obj.wan_ports, cls=HoraoEncoder) if obj.wan_ports else []
+                    json.dumps(obj.wan_ports, cls=HoraoEncoder)
+                    if obj.wan_ports
+                    else None
                 ),
             }
         if isinstance(obj, CPU):
@@ -191,7 +189,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "number": obj.number,
                 "clock_speed": obj.clock_speed,
                 "cores": obj.cores,
-                "features": obj.features if obj.features else "",
+                "features": obj.features,
             }
         if isinstance(obj, RAM):
             return {
@@ -200,24 +198,22 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "size_gb": obj.size_gb,
-                "speed_mhz": obj.speed_mhz if obj.speed_mhz else 0,
+                "speed_mhz": obj.speed_mhz,
             }
         if isinstance(obj, Accelerator):
             return {
                 "type": "Accelerator",
                 "serial_number": obj.serial_number,
-                "name": obj.name,
                 "model": obj.model,
                 "number": obj.number,
                 "memory_gb": obj.memory_gb,
-                "chip": obj.chip if obj.chip else "",
-                "clock_speed": obj.clock_speed if obj.clock_speed else 0,
+                "chip": obj.chip,
+                "clock_speed": obj.clock_speed,
             }
         if isinstance(obj, Disk):
             return {
                 "type": "Disk",
                 "serial_number": obj.serial_number,
-                "name": obj.name,
                 "model": obj.model,
                 "number": obj.number,
                 "size_gb": obj.size_gb,
@@ -232,8 +228,12 @@ class HoraoEncoder(json.JSONEncoder):
                 "cpus": json.dumps(obj.cpus, cls=HoraoEncoder),
                 "rams": json.dumps(obj.rams, cls=HoraoEncoder),
                 "nics": json.dumps(obj.nics, cls=HoraoEncoder),
-                "accelerators": json.dumps(obj.accelerators, cls=HoraoEncoder),
-                "disks": json.dumps(obj.disks, cls=HoraoEncoder),
+                "disks": json.dumps(obj.disks, cls=HoraoEncoder) if obj.disks else None,
+                "accelerators": (
+                    json.dumps(obj.accelerators, cls=HoraoEncoder)
+                    if obj.accelerators
+                    else None
+                ),
                 "status": obj.status.value,
             }
         if isinstance(obj, Module):
@@ -246,8 +246,12 @@ class HoraoEncoder(json.JSONEncoder):
                 "cpus": json.dumps(obj.cpus, cls=HoraoEncoder),
                 "rams": json.dumps(obj.rams, cls=HoraoEncoder),
                 "nics": json.dumps(obj.nics, cls=HoraoEncoder),
-                "accelerators": json.dumps(obj.accelerators, cls=HoraoEncoder),
-                "disks": json.dumps(obj.disks, cls=HoraoEncoder),
+                "disks": json.dumps(obj.disks, cls=HoraoEncoder) if obj.disks else None,
+                "accelerators": (
+                    json.dumps(obj.accelerators, cls=HoraoEncoder)
+                    if obj.accelerators
+                    else None
+                ),
                 "status": obj.status.value,
             }
         if isinstance(obj, Node):
@@ -258,7 +262,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "modules": (
-                    json.dumps(obj.modules, cls=HoraoEncoder) if obj.modules else []
+                    json.dumps(obj.modules, cls=HoraoEncoder) if obj.modules else None
                 ),
             }
         if isinstance(obj, Blade):
@@ -268,7 +272,9 @@ class HoraoEncoder(json.JSONEncoder):
                 "name": obj.name,
                 "model": obj.model,
                 "number": obj.number,
-                "nodes": json.dumps(obj.nodes, cls=HoraoEncoder) if obj.nodes else [],
+                "nodes": (
+                    json.dumps(obj.nodes, cls=HoraoEncoder) if obj.nodes else None
+                ),
             }
         if isinstance(obj, Chassis):
             return {
@@ -278,10 +284,10 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "servers": (
-                    json.dumps(obj.servers, cls=HoraoEncoder) if obj.servers else []
+                    json.dumps(obj.servers, cls=HoraoEncoder) if obj.servers else None
                 ),
                 "blades": (
-                    json.dumps(obj.blades, cls=HoraoEncoder) if obj.blades else []
+                    json.dumps(obj.blades, cls=HoraoEncoder) if obj.blades else None
                 ),
             }
         if isinstance(obj, Cabinet):
@@ -292,13 +298,13 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "servers": (
-                    json.dumps(obj.servers, cls=HoraoEncoder) if obj.servers else []
+                    json.dumps(obj.servers, cls=HoraoEncoder) if obj.servers else None
                 ),
                 "chassis": (
-                    json.dumps(obj.chassis, cls=HoraoEncoder) if obj.chassis else []
+                    json.dumps(obj.chassis, cls=HoraoEncoder) if obj.chassis else None
                 ),
                 "switches": (
-                    json.dumps(obj.switches, cls=HoraoEncoder) if obj.switches else []
+                    json.dumps(obj.switches, cls=HoraoEncoder) if obj.switches else None
                 ),
             }
         if isinstance(obj, DataCenter):
@@ -307,23 +313,21 @@ class HoraoEncoder(json.JSONEncoder):
                 "name": obj.name,
                 "number": obj.number,
             }
-            for row in obj.rows:
-                result["rows"] = json.dumps(row, cls=HoraoEncoder)
+            rows = []
+            for row in obj.rows.read():
+                rows = json.dumps(row, cls=HoraoEncoder)
+            result["rows"] = rows if rows else None
             return result
         if isinstance(obj, DataCenterNetwork):
             return {
                 "type": "DataCenterNetwork",
                 "name": obj.name,
-                "network_type": (
-                    "data"
-                    if obj.network_type == NetworkType.Data
-                    else (
-                        "control"
-                        if obj.network_type == NetworkType.Control
-                        else "management"
-                    )
+                "network_type": obj.network_type.value,
+                "graph": json.dumps(
+                    to_dict_of_dicts(obj.hash_graph()), cls=HoraoEncoder
                 ),
-                "graph": json_graph.adjacency_data(obj.graph),
+                "nodes": json.dumps(obj.nodes(), cls=HoraoEncoder),
+                "hsn": obj.hsn if obj.hsn else False,
             }
         if isinstance(obj, LogicalInfrastructure):
             result = {
@@ -333,11 +337,15 @@ class HoraoEncoder(json.JSONEncoder):
                 "claims": [],
             }
             for k, v in obj.infrastructure.items():
-                result["infrastructure"][k] = json.dumps(v, cls=HoraoEncoder)
+                result["infrastructure"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
+                    v, cls=HoraoEncoder
+                )
             for k, v in obj.constraints.items():
-                result["constraints"][k] = json.dumps(v, cls=HoraoEncoder)
+                result["constraints"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
+                    v, cls=HoraoEncoder
+                )
             for c in obj.claims:
-                result["claims"].append(c)
+                result["claims"].append(json.dumps(c, cls=HoraoEncoder))
             return result
         return json.JSONEncoder.default(self, obj)
 
@@ -351,7 +359,7 @@ class HoraoDecoder(json.JSONDecoder):
         if "date" in obj:
             return datetime.strptime(obj["date"], "%Y-%m-%d")
         if "type" in obj and obj["type"] == "Set":
-            return set(obj["content"])
+            return set(obj["value"])
         if "type" in obj and obj["type"] == "LogicalClock":
             return LogicalClock(
                 time_stamp=obj["time_stamp"],
@@ -362,56 +370,83 @@ class HoraoDecoder(json.JSONDecoder):
             return Update(
                 clock_uuid=bytearray.fromhex(obj["clock_uuid"]),
                 time_stamp=obj["time_stamp"],
-                data=obj["data"] if "data" in obj else None,
-                update_type=(
-                    UpdateType(obj["update_type"]) if "update_type" in obj else None
+                data=(
+                    json.loads(obj["data"], cls=HoraoDecoder) if obj["data"] else None
                 ),
-                writer=obj["writer"] if "writer" in obj else None,
-                name=obj["name"] if "name" in obj else None,
+                update_type=UpdateType(obj["update_type"]),
+                writer=obj["writer"] if obj["writer"] else None,
+                name=obj["name"] if obj["name"] else None,
             )
         if "type" in obj and obj["type"] == "ObservedRemovedSet":
             return ObservedRemovedSet(
-                observed=obj["observed"] if "observed" in obj else None,
+                observed=(
+                    json.loads(obj["observed"], cls=HoraoDecoder)
+                    if obj["observed"]
+                    else None
+                ),
                 observed_metadata=(
-                    obj["observed_metadata"] if "observed_metadata" in obj else None
+                    json.loads(obj["observed_metadata"], cls=HoraoDecoder)
+                    if obj["observed_metadata"]
+                    else None
                 ),
-                removed=obj["removed"] if "removed" in obj else None,
+                removed=(
+                    json.loads(obj["removed"], cls=HoraoDecoder)
+                    if obj["removed"]
+                    else None
+                ),
                 removed_metadata=(
-                    obj["removed_metadata"] if "removed_metadata" in obj else None
+                    json.loads(obj["removed_metadata"], cls=HoraoDecoder)
+                    if obj["removed_metadata"]
+                    else None
                 ),
-                clock=obj["clock"] if "clock" in obj else None,
-                listeners=obj["listeners"] if "listeners" in obj else None,
+                clock=(
+                    json.loads(obj["clock"], cls=HoraoDecoder) if obj["clock"] else None
+                ),
+                listeners=(
+                    json.loads(obj["listeners"], cls=HoraoDecoder)
+                    if obj["listeners"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "LastWriterWinsRegister":
             return LastWriterWinsRegister(
-                name=obj["name"],
-                value=obj["value"] if "value" in obj else None,
-                clock=obj["clock"] if "clock" in obj else None,
-                last_update=obj["last_update"] if "last_update" in obj else None,
-                last_writer=obj["last_writer"] if "last_writer" in obj else None,
-                listeners=obj["listeners"] if "listeners" in obj else None,
+                name=json.loads(obj["name"], cls=HoraoDecoder),
+                value=(
+                    json.loads(obj["value"], cls=HoraoDecoder) if obj["value"] else None
+                ),
+                clock=(
+                    json.loads(obj["clock"], cls=HoraoDecoder) if obj["clock"] else None
+                ),
+                last_update=obj["last_update"] if obj["last_update"] else None,
+                last_writer=obj["last_writer"] if obj["last_writer"] else None,
+                listeners=(
+                    json.loads(obj["listeners"], cls=HoraoDecoder)
+                    if obj["listeners"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "LastWriterWinsMap":
+            registers = {}
+            for k, v in obj["registers"].items():
+                registers[json.loads(k, cls=HoraoDecoder)] = json.loads(
+                    v, cls=HoraoDecoder
+                )
             return LastWriterWinsMap(
-                names=obj["names"] if "names" in obj else None,
-                registers=obj["registers"] if "registers" in obj else None,
-                listeners=obj["listeners"] if "listeners" in obj else None,
-            )
-        if "type" in obj and obj["type"] == "CRDTList":
-            return CRDTList(json.loads(obj["hardware"], cls=HoraoDecoder))
-        if "type" in obj and obj["type"] == "Hardware":
-            return Hardware(
-                serial_number=obj["serial_number"],
-                name=obj["name"],
-                model=obj["model"],
-                number=obj["number"],
+                names=(
+                    json.loads(obj["names"], cls=HoraoDecoder) if obj["names"] else None
+                ),
+                listeners=(
+                    json.loads(obj["listeners"], cls=HoraoDecoder)
+                    if obj["listeners"]
+                    else None
+                ),
+                registers=registers,
             )
         if "type" in obj and obj["type"] == "HardwareList":
-            return HardwareList(json.loads(obj["hardware"], cls=HoraoDecoder))
+            return HardwareList(items=json.loads(obj["hardware"], cls=HoraoDecoder))
         if "type" in obj and obj["type"] == "Port":
             return Port(
                 serial_number=obj["serial_number"],
-                name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
                 mac=obj["mac"],
@@ -422,7 +457,6 @@ class HoraoDecoder(json.JSONDecoder):
         if "type" in obj and obj["type"] == "NIC":
             return NIC(
                 serial_number=obj["serial_number"],
-                name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
                 ports=json.loads(obj["ports"], cls=HoraoDecoder),
@@ -438,7 +472,11 @@ class HoraoDecoder(json.JSONDecoder):
                 status=DeviceStatus(obj["status"]),
                 managed=obj["managed"],
                 lan_ports=json.loads(obj["lan_ports"], cls=HoraoDecoder),
-                uplink_ports=json.loads(obj["uplink_ports"], cls=HoraoDecoder),
+                uplink_ports=(
+                    json.loads(obj["uplink_ports"], cls=HoraoDecoder)
+                    if obj["uplink_ports"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "Router":
             return Router(
@@ -449,7 +487,11 @@ class HoraoDecoder(json.JSONDecoder):
                 router_type=RouterType(obj["router_type"]),
                 status=DeviceStatus(obj["status"]),
                 lan_ports=json.loads(obj["lan_ports"], cls=HoraoDecoder),
-                wan_ports=json.loads(obj["wan_ports"], cls=HoraoDecoder),
+                wan_ports=(
+                    json.loads(obj["wan_ports"], cls=HoraoDecoder)
+                    if obj["wan_ports"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "Firewall":
             return Firewall(
@@ -459,41 +501,41 @@ class HoraoDecoder(json.JSONDecoder):
                 number=obj["number"],
                 status=DeviceStatus(obj["status"]),
                 lan_ports=json.loads(obj["lan_ports"], cls=HoraoDecoder),
-                wan_ports=json.loads(obj["wan_ports"], cls=HoraoDecoder),
+                wan_ports=(
+                    json.loads(obj["wan_ports"], cls=HoraoDecoder)
+                    if obj["wan_ports"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "CPU":
             return CPU(
                 serial_number=obj["serial_number"],
-                name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
                 clock_speed=obj["clock_speed"],
                 cores=obj["cores"],
-                features=obj["features"],
+                features=obj["features"] if obj["features"] else None,
             )
         if "type" in obj and obj["type"] == "RAM":
             return RAM(
                 serial_number=obj["serial_number"],
-                name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
                 size_gb=obj["size_gb"],
-                speed_mhz=obj["speed_mhz"],
+                speed_mhz=obj["speed_mhz"] if obj["speed_mhz"] else None,
             )
         if "type" in obj and obj["type"] == "Accelerator":
             return Accelerator(
                 serial_number=obj["serial_number"],
-                name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
                 memory_gb=obj["memory_gb"],
-                chip=obj["chip"],
-                clock_speed=obj["clock_speed"],
+                chip=obj["chip"] if obj["chip"] else None,
+                clock_speed=obj["clock_speed"] if obj["clock_speed"] else None,
             )
         if "type" in obj and obj["type"] == "Disk":
             return Disk(
                 serial_number=obj["serial_number"],
-                name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
                 size_gb=obj["size_gb"],
@@ -507,8 +549,14 @@ class HoraoDecoder(json.JSONDecoder):
                 cpus=json.loads(obj["cpus"], cls=HoraoDecoder),
                 rams=json.loads(obj["rams"], cls=HoraoDecoder),
                 nics=json.loads(obj["nics"], cls=HoraoDecoder),
-                accelerators=json.loads(obj["accelerators"], cls=HoraoDecoder),
-                disks=json.loads(obj["disks"], cls=HoraoDecoder),
+                disks=(
+                    json.loads(obj["disks"], cls=HoraoDecoder) if obj["disks"] else None
+                ),
+                accelerators=(
+                    json.loads(obj["accelerators"], cls=HoraoDecoder)
+                    if obj["accelerators"]
+                    else None
+                ),
                 status=DeviceStatus(obj["status"]),
             )
         if "type" in obj and obj["type"] == "Module":
@@ -520,8 +568,14 @@ class HoraoDecoder(json.JSONDecoder):
                 cpus=json.loads(obj["cpus"], cls=HoraoDecoder),
                 rams=json.loads(obj["rams"], cls=HoraoDecoder),
                 nics=json.loads(obj["nics"], cls=HoraoDecoder),
-                accelerators=json.loads(obj["accelerators"], cls=HoraoDecoder),
-                disks=json.loads(obj["disks"], cls=HoraoDecoder),
+                disks=(
+                    json.loads(obj["disks"], cls=HoraoDecoder) if obj["disks"] else None
+                ),
+                accelerators=(
+                    json.loads(obj["accelerators"], cls=HoraoDecoder)
+                    if obj["accelerators"]
+                    else None
+                ),
                 status=DeviceStatus(obj["status"]),
             )
         if "type" in obj and obj["type"] == "Node":
@@ -530,7 +584,11 @@ class HoraoDecoder(json.JSONDecoder):
                 name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
-                modules=json.loads(obj["modules"], cls=HoraoDecoder),
+                modules=(
+                    json.loads(obj["modules"], cls=HoraoDecoder)
+                    if obj["modules"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "Blade":
             return Blade(
@@ -538,7 +596,9 @@ class HoraoDecoder(json.JSONDecoder):
                 name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
-                nodes=json.loads(obj["nodes"], cls=HoraoDecoder),
+                nodes=(
+                    json.loads(obj["nodes"], cls=HoraoDecoder) if obj["nodes"] else None
+                ),
             )
         if "type" in obj and obj["type"] == "Chassis":
             return Chassis(
@@ -546,8 +606,16 @@ class HoraoDecoder(json.JSONDecoder):
                 name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
-                servers=json.loads(obj["servers"], cls=HoraoDecoder),
-                blades=json.loads(obj["blades"], cls=HoraoDecoder),
+                servers=(
+                    json.loads(obj["servers"], cls=HoraoDecoder)
+                    if obj["servers"]
+                    else None
+                ),
+                blades=(
+                    json.loads(obj["blades"], cls=HoraoDecoder)
+                    if obj["blades"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "Cabinet":
             return Cabinet(
@@ -555,31 +623,56 @@ class HoraoDecoder(json.JSONDecoder):
                 name=obj["name"],
                 model=obj["model"],
                 number=obj["number"],
-                servers=json.loads(obj["servers"], cls=HoraoDecoder),
-                chassis=json.loads(obj["chassis"], cls=HoraoDecoder),
-                switches=json.loads(obj["switches"], cls=HoraoDecoder),
-            )
-        if "type" in obj and obj["type"] == "LogicalInfrastructure":
-            return LogicalInfrastructure(
-                obj["infrastructure"], obj["constraints"], obj["claims"]
+                servers=(
+                    json.loads(obj["servers"], cls=HoraoDecoder)
+                    if obj["servers"]
+                    else None
+                ),
+                chassis=(
+                    json.loads(obj["chassis"], cls=HoraoDecoder)
+                    if obj["chassis"]
+                    else None
+                ),
+                switches=(
+                    json.loads(obj["switches"], cls=HoraoDecoder)
+                    if obj["switches"]
+                    else None
+                ),
             )
         if "type" in obj and obj["type"] == "DataCenter":
             return DataCenter(
-                obj["name"], obj["number"], json.loads(obj["rows"], cls=HoraoDecoder)
+                name=obj["name"],
+                number=obj["number"],
+                rows=json.loads(obj["rows"], cls=HoraoDecoder),
             )
         if "type" in obj and obj["type"] == "DataCenterNetwork":
-            return DataCenterNetwork(
-                obj["name"],
-                (
-                    NetworkType.Data
-                    if obj["network_type"] == "data"
-                    else (
-                        NetworkType.Control
-                        if obj["network_type"] == "control"
-                        else NetworkType.Management
-                    )
-                ),
-                json_graph.adjacency_graph(obj["graph"]),
+            dcn = DataCenterNetwork(
+                name=obj["name"],
+                network_type=NetworkType(obj["network_type"]),
+                high_speed_network=obj["hsn"],
+            )
+            for node in json.loads(obj["nodes"], cls=HoraoDecoder):
+                dcn.add(node)
+            dcn.links_from_graph(from_dict_of_dicts(json.loads(obj["graph"])))
+            return dcn
+        if "type" in obj and obj["type"] == "LogicalInfrastructure":
+            infrastructure = {}
+            for k, v in obj["infrastructure"].items():
+                infrastructure[json.loads(k, cls=HoraoDecoder)] = json.loads(
+                    v, cls=HoraoDecoder
+                )
+            constraints = {}
+            for k, v in obj["constraints"].items():
+                constraints[json.loads(k, cls=HoraoDecoder)] = json.loads(
+                    v, cls=HoraoDecoder
+                )
+            claims = (
+                json.loads(obj["claims"], cls=HoraoDecoder) if obj["claims"] else None
+            )
+            return LogicalInfrastructure(
+                infrastructure=infrastructure,
+                constraints=constraints,
+                claims=claims,
             )
 
         return obj

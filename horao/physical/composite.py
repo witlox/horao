@@ -20,7 +20,8 @@ class Node(Hardware):
         number: int,
         modules: Optional[List[Module]],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
+        self.name = name
         self.modules = ComputerList[Module](modules)
 
     def __copy__(self):
@@ -44,7 +45,8 @@ class Blade(Hardware):
         number: int,
         nodes: Optional[List[Node]],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
+        self.name = name
         self.nodes = HardwareList[Node](nodes)
 
     def __copy__(self):
@@ -69,7 +71,8 @@ class Chassis(Hardware):
         servers: Optional[List[Server]],
         blades: Optional[List[Blade]],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
+        self.name = name
         self.servers = ComputerList[Server](servers)
         self.blades = HardwareList[Blade](blades)
 
@@ -97,7 +100,8 @@ class Cabinet(Hardware):
         chassis: Optional[List[Chassis]],
         switches: Optional[List[Switch]],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
+        self.name = name
         self.servers = ComputerList[Server](servers)
         self.chassis = HardwareList[Chassis](chassis)
         self.switches = NetworkList[Switch](switches)

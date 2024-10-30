@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Iterable, List, Tuple, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from horao.conceptual.decorators import instrument_class_function
 from horao.conceptual.tenant import Constraint, Tenant
@@ -65,7 +65,13 @@ class LogicalInfrastructure:
         return self.infrastructure.pop(key)
 
     def __eq__(self, other: LogicalInfrastructure) -> bool:
-        return self.infrastructure == other.infrastructure
+        for k in self.infrastructure.keys():
+            if k not in other.infrastructure:
+                return False
+            for l, r in zip(self.infrastructure[k], other.infrastructure[k]):
+                if l != r:
+                    return False
+        return True
 
     def __ne__(self, other: LogicalInfrastructure) -> bool:
         return not self == other
@@ -85,8 +91,8 @@ class LogicalInfrastructure:
     def __len__(self) -> int:
         return len(self.infrastructure)
 
-    def __contains__(self, item) -> bool:
-        return item in self.infrastructure
+    def __contains__(self, item: DataCenter) -> bool:
+        return item in self.infrastructure.keys()
 
     def __iter__(self) -> Iterable[Tuple[DataCenter, List[DataCenterNetwork]]]:
         return iter(self.infrastructure.items())

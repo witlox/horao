@@ -11,25 +11,23 @@ from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
 class Hardware(ABC):
     """Base class for hardware components and composites."""
 
-    def __init__(self, serial_number: str, name: str, model: str, number: int):
+    def __init__(self, serial_number: str, model: str, number: int):
         """
         Initialize a hardware instance
         :param serial_number: serial number
-        :param name: name
         :param model: model
         :param number: 1-indexed number of the hardware instance in a composite
         """
         self.serial_number = serial_number
-        self.name = name
         self.model = model
         self.number = number
 
     def __copy__(self):
-        return Hardware(self.serial_number, self.name, self.model, self.number)
+        return Hardware(self.serial_number, self.model, self.number)
 
     def __eq__(self, other: Hardware) -> bool:
         """
-        Compare two hardware instances, note that serial numbers are assumed to be unique
+        Compare two hardware instances by serial and number
         :param other: instance of Hardware
         :return: bool
         """
@@ -37,7 +35,7 @@ class Hardware(ABC):
             return False
         if self.serial_number != other.serial_number:
             return False
-        if not (self.model == other.model and self.name == other.name):
+        if not (self.model == other.model and self.number == other.number):
             return False
         return True
 
@@ -62,7 +60,7 @@ class Hardware(ABC):
         Hash the hardware instance, note that number is not included in the hash
         :return: int
         """
-        return hash((self.serial_number, self.name, self.model))
+        return hash((self.serial_number, self.model))
 
 
 T = TypeVar("T", bound=Hardware)

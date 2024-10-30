@@ -39,8 +39,8 @@ def initialize():
         DeviceStatus.Up,
         True,
         [
-            Port("1", "1", "1", 1, "1", DeviceStatus.Up, False, 100),
-            Port("1", "2", "1", 2, "2", DeviceStatus.Up, False, 100),
+            Port("1", "1", 1, "1", DeviceStatus.Up, False, 100),
+            Port("1", "2", 2, "2", DeviceStatus.Up, False, 100),
         ],
         [],
     )
@@ -49,19 +49,18 @@ def initialize():
         "1",
         "server",
         1,
-        [CPU("1", "1", "1", 1, 2.4, 4, None), CPU("1", "1", "1", 2, 2.4, 4, None)],
+        [CPU("1", "1", 1, 2.4, 4, None), CPU("1", "1", 2, 2.4, 4, None)],
         [
-            RAM("1", "1", "1", 1, 16, None),
-            RAM("1", "1", "1", 2, 16, None),
-            RAM("1", "1", "1", 3, 16, None),
+            RAM("1", "1", 1, 16, None),
+            RAM("1", "1", 2, 16, None),
+            RAM("1", "1", 3, 16, None),
         ],
         [
             NIC(
                 "1",
                 "1",
-                "1",
                 1,
-                [Port("1", "1", "1", 1, "1", DeviceStatus.Up, False, 100)],
+                [Port("1", "1", 1, "1", DeviceStatus.Up, False, 100)],
             )
         ],
         [],
@@ -73,19 +72,18 @@ def initialize():
         "1",
         "server",
         2,
-        [CPU("1", "1", "1", 1, 2.4, 4, None), CPU("1", "1", "1", 2, 2.4, 4, None)],
+        [CPU("1", "1", 1, 2.4, 4, None), CPU("1", "1", 2, 2.4, 4, None)],
         [
-            RAM("1", "1", "1", 1, 16, None),
-            RAM("1", "1", "1", 2, 16, None),
-            RAM("1", "1", "1", 3, 16, None),
+            RAM("1", "1", 1, 16, None),
+            RAM("1", "1", 2, 16, None),
+            RAM("1", "1", 3, 16, None),
         ],
         [
             NIC(
                 "1",
                 "1",
-                "1",
                 1,
-                [Port("1", "1", "1", 1, "1", DeviceStatus.Up, False, 100)],
+                [Port("1", "1", 1, "1", DeviceStatus.Up, False, 100)],
             )
         ],
         [],

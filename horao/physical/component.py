@@ -15,20 +15,18 @@ class RAM(Hardware):
     def __init__(
         self,
         serial_number: str,
-        name: str,
         model: str,
         number: int,
         size_gb: int,
         speed_mhz: Optional[int],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
         self.size_gb = size_gb
         self.speed_mhz = speed_mhz
 
     def __copy__(self):
         return RAM(
             self.serial_number,
-            self.name,
             self.model,
             self.number,
             self.size_gb,
@@ -40,14 +38,13 @@ class CPU(Hardware):
     def __init__(
         self,
         serial_number: str,
-        name: str,
         model: str,
         number: int,
         clock_speed: float,
         cores: int,
         features: Optional[str],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
         self.clock_speed = clock_speed
         self.cores = cores
         self.features = features
@@ -55,7 +52,6 @@ class CPU(Hardware):
     def __copy__(self):
         return CPU(
             self.serial_number,
-            self.name,
             self.model,
             self.number,
             self.clock_speed,
@@ -68,14 +64,13 @@ class Accelerator(Hardware):
     def __init__(
         self,
         serial_number: str,
-        name: str,
         model: str,
         number: int,
         memory_gb: int,
         chip: Optional[str],
         clock_speed: Optional[int],
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
         self.memory_gb = memory_gb
         self.chip = chip
         self.clock_speed = clock_speed
@@ -83,7 +78,6 @@ class Accelerator(Hardware):
     def __copy__(self):
         return Accelerator(
             self.serial_number,
-            self.name,
             self.model,
             self.number,
             self.memory_gb,
@@ -96,15 +90,12 @@ class Disk(Hardware):
     def __init__(
         self,
         serial_number: str,
-        name: str,
         model: str,
         number: int,
         size_gb: int,
     ):
-        super().__init__(serial_number, name, model, number)
+        super().__init__(serial_number, model, number)
         self.size_gb = size_gb
 
     def __copy__(self):
-        return Disk(
-            self.serial_number, self.name, self.model, self.number, self.size_gb
-        )
+        return Disk(self.serial_number, self.model, self.number, self.size_gb)
