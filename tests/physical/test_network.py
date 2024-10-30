@@ -18,8 +18,8 @@ from horao.physical.status import DeviceStatus
 os.environ["ENVIRONMENT"] = "development"
 
 
-core_port_left = Port("ser1", "cp1", "csp", 1, "m1", DeviceStatus.Down, False, 100)
-core_port_right = Port("ser2", "cp2", "csp", 2, "m2", DeviceStatus.Down, False, 100)
+core_port_left = Port("ser1", "cp1", 1, "m1", DeviceStatus.Down, False, 100)
+core_port_right = Port("ser2", "cp2", 2, "m2", DeviceStatus.Down, False, 100)
 core = Switch(
     "ser3",
     "core",
@@ -45,7 +45,6 @@ leaf_left = Switch(
         Port(
             "ser4",
             "lp",
-            "lsp",
             2,
             "m3.1",
             DeviceStatus.Down,
@@ -57,7 +56,6 @@ leaf_left = Switch(
         Port(
             "ser4",
             "lp",
-            "lsp",
             1,
             "m3",
             DeviceStatus.Down,
@@ -79,7 +77,6 @@ leaf_right = Switch(
         Port(
             "ser4",
             "lp",
-            "lsp",
             2,
             "m3.1",
             DeviceStatus.Down,
@@ -87,12 +84,10 @@ leaf_right = Switch(
             25,
         )
     ],
-    [Port("ser6", "lp1", "lsp", 1, "m4", DeviceStatus.Down, False, 100)],
+    [Port("ser6", "lp1", 1, "m4", DeviceStatus.Down, False, 100)],
 )
 
-server_nic_port = Port(
-    "srv_port", "srv_port", "srv_port", 1, "m5", DeviceStatus.Down, False, 100
-)
+server_nic_port = Port("srv_port", "srv_port", 1, "m5", DeviceStatus.Down, False, 100)
 server = Server(
     "srv",
     "srv",
@@ -100,7 +95,7 @@ server = Server(
     1,
     [],
     [],
-    [NIC("srv_nic", "srv_nic", "srv_nic", 1, [server_nic_port])],
+    [NIC("srv_nic", "srv_nic", 1, [server_nic_port])],
     [],
     [],
     DeviceStatus.Up,
@@ -154,7 +149,6 @@ def test_downing_switch_downs_all_ports():
     switch_port = Port(
         "ser4",
         "lp",
-        "lsp",
         2,
         "m3.1",
         DeviceStatus.Down,
@@ -174,9 +168,9 @@ def test_downing_switch_downs_all_ports():
         [],
     )
     server_nic_port = Port(
-        "srv_port", "srv_port", "srv_port", 1, "m5", DeviceStatus.Down, False, 100
+        "srv_port", "srv_port", 1, "m5", DeviceStatus.Down, False, 100
     )
-    server_nic = NIC("srv_nic", "srv_nic", "srv_nic", 1, [server_nic_port])
+    server_nic = NIC("srv_nic", "srv_nic", 1, [server_nic_port])
     server = Server(
         "srv",
         "srv",
@@ -190,7 +184,7 @@ def test_downing_switch_downs_all_ports():
         DeviceStatus.Up,
     )
     dcn = DataCenterNetwork("dcn", NetworkType.Data)
-    dcn.add_multiple([(switch, None), (server, server)])
+    dcn.add_multiple([switch, server])
     dcn.link(server_nic, switch)
     assert switch_port.status == DeviceStatus.Up
     assert server_nic_port.status == DeviceStatus.Up
