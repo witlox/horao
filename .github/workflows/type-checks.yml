@@ -1,4 +1,4 @@
-name: poetry
+name: type-checks
 
 on:
   - push
@@ -29,6 +29,6 @@ jobs:
           poetry config virtualenvs.in-project false
           poetry config virtualenvs.path .virtualenvs
       - name: Install project
-        run: poetry install --with test --no-interaction
+        run: poetry install --with dev --no-interaction
       - name: Type-check with poetry
         run: poetry run mypy horao

@@ -1,4 +1,4 @@
-name: poetry
+name: coverage
 
 on:
   - push
