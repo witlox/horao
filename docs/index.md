@@ -5,4 +5,4 @@ There are various cloud based management engines available. These tend to be eit
 These pages are currently available:
 - [Architecture](./Architecture.md)
 - [Development notes](./Development.md)
-- [Creating a virtual environment](./VirtualEnvironment.md)
+- [Creating a virtual environment](./CreateVirtualEnv.md)
