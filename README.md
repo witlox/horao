@@ -25,7 +25,7 @@ The command line way:
 2. Create a virtual environment (`python -m venv .venv`)
 3. Activate the virtual environment (`source .venv/bin/activate`)
 4. Install poetry (`pip install poetry`)
-5. Add the dotenv plugin to poetry (`poetry plugin add poetry-dotenv-plugin`)
+5. Add the dotenv plugin to poetry (`poetry self add poetry-dotenv-plugin`)
 6. Install the required packages (`poetry install`)
 4. Run the project
   a. `poetry run python horao/main.py`

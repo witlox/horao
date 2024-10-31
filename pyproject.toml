@@ -31,10 +31,6 @@ pre-commit = "^4.0.1"
 [tool.poetry.group.dev]
 optional = true
 
-[tool.poetry.plugins.dotenv]
-ignore = "false"
-location = ".env.development"
-
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.3"
 pytest-cov = "^5.0.0"
