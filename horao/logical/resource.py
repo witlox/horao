@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from horao.physical.storage import StorageClass, StorageType
 
@@ -16,7 +17,7 @@ class Compute(ResourceDefinition):
     """Represents a compute resource."""
 
     def __init__(
-        self, cpu: int, ram: int, accelerator: bool, amount: int = None
+        self, cpu: int, ram: int, accelerator: bool, amount: Optional[int] = None
     ) -> None:
         """
         Initialize the compute resource.
@@ -25,12 +26,14 @@ class Compute(ResourceDefinition):
         :param accelerator: requires an accelerator
         :param amount: total amount of nodes
         """
-        super().__init__(amount)
+        super().__init__(amount) if amount else super().__init__()
         self.cpu = cpu
         self.ram = ram
         self.accelerator = accelerator
 
-    def __eq__(self, other: Compute) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Compute):
+            return False
         return (
             super().__eq__(other)
             and self.cpu == other.cpu
@@ -58,7 +61,9 @@ class Storage(ResourceDefinition):
         self.storage_type = storage_type
         self.storage_class = storage_class
 
-    def __eq__(self, other: Storage) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Storage):
+            return False
         return (
             super().__eq__(other)
             and self.storage_type == other.storage_type

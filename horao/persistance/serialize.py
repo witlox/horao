@@ -3,7 +3,7 @@
 import json
 from datetime import date, datetime
 
-from networkx.convert import from_dict_of_dicts, to_dict_of_dicts
+from networkx.convert import from_dict_of_dicts, to_dict_of_dicts  # type: ignore
 
 from horao.conceptual.claim import Reservation
 from horao.conceptual.crdt import (

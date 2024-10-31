@@ -5,9 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Dict, Iterable, List, Optional, Tuple
 
-import networkx as nx
-from networkx.algorithms.traversal import bfs_edges
-from networkx.classes import Graph
+import networkx as nx  # type: ignore
+from networkx.classes import Graph  # type: ignore
 
 from horao.conceptual.crdt import LastWriterWinsMap
 from horao.conceptual.decorators import instrument_class_function
@@ -38,8 +37,8 @@ class DataCenter:
         self,
         name: str,
         number: int,
-        rows: LastWriterWinsMap = None,
-        items: Dict[int, List[Cabinet]] = None,
+        rows: Optional[LastWriterWinsMap] = None,
+        items: Optional[Dict[int, List[Cabinet]]] = None,
     ) -> None:
         """
         Initialize a data center
@@ -54,7 +53,7 @@ class DataCenter:
         self.rows = LastWriterWinsMap() if not rows else rows
         if items:
             for k, v in items.items():
-                self.rows.set(k, v, hash(k))
+                self.rows.set(k, v, hash(k))  # type: ignore
 
     def clear(self) -> None:
         self.rows = LastWriterWinsMap()
@@ -74,7 +73,7 @@ class DataCenter:
         return False
 
     def update(self, key: int, value: List[Cabinet]) -> None:
-        self.rows.set(key, value, hash(key))
+        self.rows.set(key, value, hash(key))  # type: ignore
 
     def keys(self) -> List[int]:
         return [k for k, _ in self.rows.read()]
@@ -93,14 +92,13 @@ class DataCenter:
                 return v.value
         raise KeyError(f"Key {key} not found")
 
-    def __eq__(self, other: DataCenter) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, DataCenter):
+            return False
         return self.name == other.name
 
-    def __ne__(self, other: DataCenter) -> bool:
-        return not self == other
-
     def __setitem__(self, key: int, item: List[Cabinet]) -> None:
-        self.rows.set(key, item, hash(key))
+        self.rows.set(key, item, hash(key))  # type: ignore
 
     @instrument_class_function(name="getitem", level=logging.DEBUG)
     def __getitem__(self, key) -> List[Cabinet]:
@@ -255,7 +253,9 @@ class DataCenterNetwork:
         self.network_type = network_type
         self.hsn = high_speed_network if high_speed_network else False
 
-    def __eq__(self, other: DataCenterNetwork):
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, DataCenterNetwork):
+            return False
         return self.name == other.name and self.network_type == other.network_type
 
     def __hash__(self):
@@ -308,18 +308,18 @@ class DataCenterNetwork:
             left_port = next(iter([l for l in left.ports if not l.connected]), None)
         if not left_port:
             raise ValueError(
-                f"No free ports available on {left.name} ({left.number}:{left.serial_number})"
+                f"No free ports available on {left} ({left.number}:{left.serial_number})"
             )
         if isinstance(right, NetworkDevice):
             right_port = next(iter([r for r in right.ports if not r.connected]), None)
         else:
             # we assume that if it isn't a network device, it is a computer
             right_port = next(
-                iter([r for n in right.nics for r in n.ports if not r.connected]), None
+                iter([r for n in right.nics for r in n.ports if not r.connected]), None  # type: ignore
             )
         if not right_port:
             raise ValueError(
-                f"No free ports available on {right.name} ({right.number}:{right.serial_number})"
+                f"No free ports available on {right} ({right.number}:{right.serial_number})"
             )
         link_free_ports(left_port, right_port)
 
@@ -344,11 +344,11 @@ class DataCenterNetwork:
         else:
             # we assume that if it isn't a network device, it is a computer
             right_port = next(
-                iter([r for n in right.nics for r in n.ports if r.connected]), None
+                iter([r for n in right.nics for r in n.ports if r.connected]), None  # type: ignore
             )
         if not left_port or not right_port:
             raise ValueError(
-                f"could not determine connected ports for {left.name} and {right.name}"
+                f"could not determine connected ports for {left} and {right}"
             )
         left_port.connected = False
         left_port.status = DeviceStatus.Down
@@ -368,16 +368,19 @@ class DataCenterNetwork:
                 left_port = next(iter([l for l in n.uplink_ports if l.connected]), None)
             elif isinstance(n, Computer):
                 left_port = next(
-                    iter([l for ni in n.nics for l in ni if l.connected]), None
+                    iter([l for ni in n.nics for l in ni if l.connected]), None  # type: ignore
                 )
             else:
                 left_port = next(iter([l for l in n.ports if l.connected]), None)
             if left_port:
                 left_port.status = DeviceStatus.Down
-        for port in device.ports:
-            port.status = (
-                DeviceStatus.Down if port.status == DeviceStatus.Up else DeviceStatus.Up
-            )
+        if isinstance(device, NetworkDevice):
+            for port in device.ports:
+                port.status = (
+                    DeviceStatus.Down
+                    if port.status == DeviceStatus.Up
+                    else DeviceStatus.Up
+                )
         if isinstance(device, Switch):
             device.status = (
                 DeviceStatus.Down
@@ -418,7 +421,7 @@ class DataCenterNetwork:
                         else DeviceStatus.Up
                     )
         elif isinstance(device, Computer):
-            for nic in device.nics:
+            for nic in device.nics:  # type: ignore
                 for port in nic:
                     port.status = (
                         DeviceStatus.Down

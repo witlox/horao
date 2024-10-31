@@ -40,22 +40,33 @@ class Claim(ABC):
         self.end = end
 
     def __lt__(self, other: Claim) -> bool:
-        return self.start < other.start
+        if not self.start and not other.start:
+            return False
+        if not self.start and other.start:
+            return False
+        if self.start and not other.start:
+            return True
+        return self.start < other.start  # type: ignore
 
     def __gt__(self, other: Claim) -> bool:
-        return self.start > other.start
+        return not self.__lt__(other)
 
-    def __eq__(self, other: Claim) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Claim):
+            return False
         return self.start == other.start and self.end == other.end
 
     def __le__(self, other: Claim) -> bool:
-        return self.start <= other.start
+        if not self.start and not other.start:
+            return True
+        if not self.start and other.start:
+            return True
+        if self.start and not other.start:
+            return False
+        return self.start <= other.start  # type: ignore
 
     def __ge__(self, other: Claim) -> bool:
-        return self.start >= other.start
-
-    def __ne__(self, other: Claim) -> bool:
-        return not self.__eq__(other)
+        return not self.__le__(other)
 
     def __hash__(self) -> int:
         return hash((self.name, self.start, self.end))
@@ -90,7 +101,9 @@ class Maintenance(Claim):
         self.operator = operator
         self.target = target
 
-    def __eq__(self, other: Maintenance) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Maintenance):
+            return False
         return (
             super().__eq__(other)
             and self.reason == other.reason
@@ -130,7 +143,9 @@ class Reservation(Claim):
         self.maximal_resources = maximal_resources or []
         self.hsn_only = hsn_only
 
-    def __eq__(self, other: Reservation) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Reservation):
+            return False
         return (
             super().__eq__(other)
             and self.resources == other.resources

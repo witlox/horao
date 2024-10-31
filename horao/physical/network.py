@@ -99,13 +99,12 @@ class NetworkDevice(Hardware):
         super().__init__(serial_number, model, number)
         self.ports = ports
 
-    def __eq__(self, other: NetworkDevice) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, NetworkDevice):
+            return False
         return self.serial_number == other.serial_number and self.model == other.model
 
-    def __ne__(self, other: NetworkDevice) -> bool:
-        return not self.__eq__(other)
-
-    def __gt__(self, other: NetworkDevice) -> bool:
+    def __gt__(self, other) -> bool:
         return self.number > other.number
 
     def __lt__(self, other):
@@ -184,7 +183,11 @@ T = TypeVar("T", bound=NetworkDevice)
 
 
 class NetworkList(CRDTList[T]):
-    def __init__(self, devices: List[T] = None, items: LastWriterWinsMap = None):
+    def __init__(
+        self,
+        devices: Optional[List[T]] = None,
+        items: Optional[LastWriterWinsMap] = None,
+    ):
         super().__init__(devices, items)
 
 

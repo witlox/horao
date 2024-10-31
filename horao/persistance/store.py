@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-#
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
-import redis
+from redis import asyncio as redis
 
 from horao.conceptual.decorators import instrument_class_function
 from horao.persistance.serialize import HoraoDecoder, HoraoEncoder
@@ -12,7 +12,7 @@ from horao.persistance.serialize import HoraoDecoder, HoraoEncoder
 class Store:
     """Store is a class that is used to store and load objects from memory or redis."""
 
-    def __init__(self, url: Optional[str]) -> None:
+    def __init__(self, url: Optional[str] = None) -> None:
         """
         Initialize the store
         :param url: optional url to connect to redis, if not provided, memory will be used
@@ -20,21 +20,24 @@ class Store:
         """
         if url:
             self.redis = redis.Redis.from_url(url)
-        self.memory = {}
+        self.memory: Dict[str, Any] = {}
 
     @instrument_class_function(name="load", level=logging.DEBUG)
-    def load(self, key: str) -> Any:
+    async def load(self, key: str) -> Any | None:
         """
         Load the object from memory or redis
         :param key: key to structure
-        :return: structure
+        :return: structure or None
         """
         if hasattr(self, "redis"):
-            return json.loads(self.redis.get(key), cls=HoraoDecoder)
+            structure = await self.redis.get(key)
+            return json.loads(structure, cls=HoraoDecoder) if structure else None
+        if key not in self.memory:
+            return None
         return json.loads(self.memory[key], cls=HoraoDecoder)
 
     @instrument_class_function(name="save", level=logging.DEBUG)
-    def save(self, key: str, value: Any) -> None:
+    async def save(self, key: str, value: Any) -> None:
         """
         Save the object to memory or redis
         :param key: key to structure
@@ -42,5 +45,5 @@ class Store:
         :return: None
         """
         if hasattr(self, "redis"):
-            self.redis.set(key, json.dumps(value, cls=HoraoEncoder))
+            await self.redis.set(key, json.dumps(value, cls=HoraoEncoder))
         self.memory[key] = json.dumps(value, cls=HoraoEncoder)

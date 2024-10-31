@@ -49,20 +49,19 @@ class Computer(ABC):
             list(iter(self.accelerators)),
         )
 
-    def __eq__(self, other: Computer) -> bool:
+    def __eq__(self, other) -> bool:
         """
         Compare two computers, note that names are assumed to be unique
         :param other: instance of Computer
         :return: bool
         """
+        if not isinstance(other, Computer):
+            return False
         if self.serial_number != other.serial_number:
             return False
         if not self.name == other.name:
             return False
         return True
-
-    def __ne__(self, other) -> bool:
-        return not self.__eq__(other)
 
     def __gt__(self, other) -> bool:
         return self.number > other.number
@@ -142,5 +141,9 @@ T = TypeVar("T", bound=Computer)
 
 
 class ComputerList(CRDTList[T]):
-    def __init__(self, computers: List[T] = None, items: LastWriterWinsMap = None):
+    def __init__(
+        self,
+        computers: Optional[List[T]] = None,
+        items: Optional[LastWriterWinsMap] = None,
+    ):
         super().__init__(computers, items)

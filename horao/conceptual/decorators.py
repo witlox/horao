@@ -8,7 +8,7 @@ from opentelemetry import trace
 
 
 def instrument_class_function(
-    name: str = None,
+    name: str,
     level: int = logging.INFO,
 ):
     """

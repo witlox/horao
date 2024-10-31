@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import List, TypeVar
+from typing import List, TypeVar, Optional
 
 from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
 
@@ -25,7 +25,7 @@ class Hardware(ABC):
     def __copy__(self):
         return Hardware(self.serial_number, self.model, self.number)
 
-    def __eq__(self, other: Hardware) -> bool:
+    def __eq__(self, other) -> bool:
         """
         Compare two hardware instances by serial and number
         :param other: instance of Hardware
@@ -67,5 +67,9 @@ T = TypeVar("T", bound=Hardware)
 
 
 class HardwareList(CRDTList[T]):
-    def __init__(self, hardware: List[T] = None, items: LastWriterWinsMap = None):
+    def __init__(
+        self,
+        hardware: Optional[List[T]] = None,
+        items: Optional[LastWriterWinsMap] = None,
+    ):
         super().__init__(hardware, items)

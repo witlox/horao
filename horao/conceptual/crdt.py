@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from typing import (
-    Any,
     Callable,
     Dict,
     Generic,
@@ -30,13 +28,13 @@ class ObservedRemovedSet(CRDT):
 
     def __init__(
         self,
-        observed: Set[Hashable] = None,
-        observed_metadata: Dict[Hashable, Update] = None,
-        removed: Set[Hashable] = None,
-        removed_metadata: Dict[Hashable, Update] = None,
-        clock: LogicalClock = None,
+        observed: Optional[Set[Hashable]] = None,
+        observed_metadata: Optional[Dict[Hashable, Update]] = None,
+        removed: Optional[Set[Hashable]] = None,
+        removed_metadata: Optional[Dict[Hashable, Update]] = None,
+        clock: Optional[LogicalClock] = None,
         cache: Optional[Tuple] = None,
-        listeners: List[Callable] = None,
+        listeners: Optional[List[Callable]] = None,
     ) -> None:
         """
         Initialize the ObservedRemovedSet.
@@ -121,7 +119,11 @@ class ObservedRemovedSet(CRDT):
         return self
 
     def checksum(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+        self,
+        /,
+        *,
+        from_time_stamp: Optional[float] = None,
+        until_time_stamp: Optional[float] = None,
     ) -> Tuple[int, ...]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
@@ -148,7 +150,11 @@ class ObservedRemovedSet(CRDT):
         return hash(frozenset(observed)), hash(frozenset(removed))
 
     def history(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+        self,
+        /,
+        *,
+        from_time_stamp: Optional[float] = None,
+        until_time_stamp: Optional[float] = None,
     ) -> tuple[Update, ...]:
         """
         Returns a concise history of Updates that will converge to the underlying data. Useful for
@@ -318,7 +324,7 @@ class LastWriterWinsRegister(CRDT):
         :param right: value
         :return: bool
         """
-        return left > right
+        return left > right  # type: ignore
 
     def update(self, state_update: Update) -> LastWriterWinsRegister:
         """
@@ -339,7 +345,7 @@ class LastWriterWinsRegister(CRDT):
         elif self.clock.are_concurrent(state_update.time_stamp, self.last_update):
             if (
                 self.last_writer is None
-                or state_update.writer > self.last_writer
+                or state_update.writer > self.last_writer  # type: ignore
                 or (
                     state_update.writer == self.last_writer
                     and self.compare_values(state_update.data, self.value)
@@ -353,7 +359,11 @@ class LastWriterWinsRegister(CRDT):
         return self
 
     def checksum(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+        self,
+        /,
+        *,
+        from_time_stamp: Optional[float] = None,
+        until_time_stamp: Optional[float] = None,
     ) -> Tuple[int]:
         """
         Returns the hash for the underlying data to detect de-synchronization due to message failure.
@@ -364,8 +374,12 @@ class LastWriterWinsRegister(CRDT):
         return (hash(self.value),)
 
     def history(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
-    ) -> tuple[Update]:
+        self,
+        /,
+        *,
+        from_time_stamp: Optional[float] = None,
+        until_time_stamp: Optional[float] = None,
+    ) -> tuple[Update, ...]:
         """
         Returns a concise history of Updates that will converge to the underlying data. Useful for resynchronization
         by replaying updates from divergent nodes.
@@ -559,7 +573,11 @@ class LastWriterWinsMap(CRDT):
         return self
 
     def checksum(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+        self,
+        /,
+        *,
+        from_time_stamp: Optional[float] = None,
+        until_time_stamp: Optional[float] = None,
     ) -> tuple[int, ...]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
@@ -582,7 +600,11 @@ class LastWriterWinsMap(CRDT):
         return tuple(results)
 
     def history(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+        self,
+        /,
+        *,
+        from_time_stamp: Optional[float] = None,
+        until_time_stamp: Optional[float] = None,
     ) -> tuple[Update, ...]:
         """
         Returns a concise history of Updates that will converge to the underlying data. Useful for
@@ -591,7 +613,7 @@ class LastWriterWinsMap(CRDT):
         :param until_time_stamp: unix timestamp
         :return: tuple[Update]
         """
-        registers_history: dict[Hashable, tuple[Update]] = {}
+        registers_history: dict[Hashable, tuple[Update, ...]] = {}
         observed_removed_set_history = self.names.history(
             from_time_stamp=from_time_stamp, until_time_stamp=until_time_stamp
         )
@@ -693,7 +715,9 @@ class LastWriterWinsMap(CRDT):
         for listener in self.listeners:
             listener(state_update)
 
-    def __eq__(self, other: LastWriterWinsMap) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, LastWriterWinsMap):
+            return False
         other_names = other.names.read()
         for name in self.names.read():
             if name not in other_names:
@@ -705,11 +729,8 @@ class LastWriterWinsMap(CRDT):
                 return False
         return True
 
-    def __ne__(self, other: LastWriterWinsMap) -> bool:
-        return not self == other
 
-
-T = TypeVar("T", bound=CRDT)
+T = TypeVar("T", bound=Hashable)
 
 
 class CRDTList(Generic[T]):
@@ -752,7 +773,7 @@ class CRDTList(Generic[T]):
 
     def copy(self) -> CRDTList[T]:
         results = CRDTList[T]()
-        for item in self:
+        for _, item in self.hardware.read().items():
             results.append(item.copy())
         return results
 
@@ -776,7 +797,7 @@ class CRDTList(Generic[T]):
             None,
         )
         if result is None:
-            self.log.error(f"{item.name} not found.")
+            self.log.error(f"{item} not found.")
             raise ValueError(f"{item} not found.")
         return result
 
@@ -784,7 +805,7 @@ class CRDTList(Generic[T]):
         self.hardware.set(index, item, hash(item))
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
-    def pop(self, index: int, default: T = None) -> Optional[T]:
+    def pop(self, index: int, default=None) -> Optional[T]:
         if index >= len(self):
             self.log.debug(f"Index {index} out of bounds, returning default.")
             return default
@@ -805,7 +826,7 @@ class CRDTList(Generic[T]):
             None,
         )
         if not local_item:
-            self.log.debug(f"{item.name} not found.")
+            self.log.debug(f"{item} not found.")
             raise ValueError(f"{item} not found.")
         self.hardware.unset(local_item, hash(item))
 
@@ -817,7 +838,7 @@ class CRDTList(Generic[T]):
         """
         raise NotImplementedError("Cannot reverse a list inplace in a CRDT")
 
-    def sort(self, item: T = None, reverse: bool = False) -> None:
+    def sort(self, item=None, reverse: bool = False) -> None:
         """
         cannot sort a list inplace in a CRDT
         :return: None
@@ -828,11 +849,10 @@ class CRDTList(Generic[T]):
     def __len__(self) -> int:
         return len(self.hardware.read())
 
-    def __eq__(self, other: CRDTList[T]) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, CRDTList):
+            return False
         return self.hardware.read() == other.hardware.read()
-
-    def __ne__(self, other: CRDTList[T]) -> bool:
-        return self.hardware.read() != other.hardware.read()
 
     def __contains__(self, item: T) -> bool:
         return item in self.hardware.read()

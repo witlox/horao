@@ -11,13 +11,27 @@ from typing import Any, Callable, Hashable, Optional, Protocol, Tuple, runtime_c
 from uuid import uuid4
 
 
-@dataclass
 class LogicalClock:
     """Lamport logical clock."""
 
-    time_stamp: float = field(default=datetime.timestamp(datetime.now(tz=timezone.utc)))
-    uuid: bytes = field(default_factory=lambda: uuid4().bytes)
-    offset: float = environ.get("TIME_OFFSET", 0.0)
+    def __init__(
+        self,
+        time_stamp: Optional[float] = None,
+        uuid: Optional[bytes] = None,
+        offset: Optional[float] = None,
+    ):
+        """
+
+        :param time_stamp:
+        :param uuid:
+        """
+        self.time_stamp = (
+            time_stamp
+            if time_stamp is not None
+            else datetime.timestamp(datetime.now(tz=timezone.utc))
+        )
+        self.uuid = uuid4().bytes if uuid is None else uuid
+        self.offset = float(environ.get("TIME_OFFSET", 0.0)) if not offset else offset
 
     def read(self) -> float:
         """
@@ -80,7 +94,9 @@ class LogicalClock:
             return -1
         return 0
 
-    def __eq__(self, other: LogicalClock) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, LogicalClock):
+            return False
         if self.offset == 0.0:
             return self.time_stamp == other.time_stamp and self.uuid == other.uuid
         return (
@@ -156,7 +172,7 @@ class CRDT(Protocol):
         ...
 
     def checksum(
-        self, /, *, from_time_stamp: float = None, until_time_stamp: float = None
+        self, /, *, from_time_stamp: Optional[float], until_time_stamp: Optional[float]
     ) -> Tuple[int, ...]:
         """
         Returns any checksums for the underlying data to detect de-synchronization due to message failure.
@@ -167,12 +183,8 @@ class CRDT(Protocol):
         ...
 
     def history(
-        self,
-        /,
-        *,
-        from_time_stamp: float = None,
-        until_time_stamp: float = None,
-    ) -> Tuple[Update]:
+        self, /, *, from_time_stamp: Optional[float], until_time_stamp: Optional[float]
+    ) -> Tuple[Update, ...]:
         """
         Returns a concise history of Updates that will converge to the underlying data. Useful for resynchronization by
         replaying all updates from divergent nodes.

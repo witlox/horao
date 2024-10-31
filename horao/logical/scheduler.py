@@ -51,9 +51,9 @@ def dynamic_start_date(
             > total_infra_compute_cpu
             - sum(
                 [
-                    c.cpu * c.amount
+                    c.cpu * c.amount  # type: ignore
                     for cc in other_claims_in_window
-                    for c in cc.resources
+                    for c in cc.resources  # type: ignore
                     if isinstance(c, Compute)
                 ]
             )
@@ -62,9 +62,9 @@ def dynamic_start_date(
                 > total_infra_compute_ram
                 - sum(
                     [
-                        c.ram * c.amount
+                        c.ram * c.amount  # type: ignore
                         for cc in other_claims_in_window
-                        for c in cc.resources
+                        for c in cc.resources  # type: ignore
                         if isinstance(c, Compute)
                     ]
                 )
@@ -74,9 +74,9 @@ def dynamic_start_date(
                 > total_infra_compute_accelerator
                 - sum(
                     [
-                        c.amount
+                        c.amount  # type: ignore
                         for cc in other_claims_in_window
-                        for c in cc.resources
+                        for c in cc.resources  # type: ignore
                         if isinstance(c, Compute) and c.accelerator
                     ]
                 )
@@ -86,9 +86,9 @@ def dynamic_start_date(
                 > total_infra_storage_block
                 - sum(
                     [
-                        s.amount
+                        s.amount  # type: ignore
                         for sc in other_claims_in_window
-                        for s in sc.resources
+                        for s in sc.resources  # type: ignore
                         if isinstance(s, Storage)
                         and s.storage_type is StorageType.Block
                     ]
@@ -155,32 +155,32 @@ class Scheduler:
                 c
                 for cl in self.infrastructure.claims.values()
                 for c in cl
-                if (not c.start or c.start < reservation.end)
-                and (not c.end or c.end > reservation.start)
+                if ((not c.start or not reservation.end) or c.start < reservation.end)
+                and ((not c.end or not reservation.start) or c.end > reservation.start)
             ]
             if claim_compute_cpu > total_infra_compute_cpu - sum(
                 [
-                    c.cpu * c.amount
+                    c.cpu * c.amount  # type: ignore
                     for cc in other_claims
-                    for c in cc.resources
+                    for c in cc.resources  # type: ignore
                     if isinstance(c, Compute)
                 ]
             ):
                 raise ValueError("Claim exceeds compute CPU infrastructure limits")
             if claim_compute_ram > total_infra_compute_ram - sum(
                 [
-                    c.ram * c.amount
+                    c.ram * c.amount  # type: ignore
                     for cc in other_claims
-                    for c in cc.resources
+                    for c in cc.resources  # type: ignore
                     if isinstance(c, Compute)
                 ]
             ):
                 raise ValueError("Claim exceeds compute RAM infrastructure limits")
             if claim_compute_accelerator > total_infra_compute_accelerator - sum(
                 [
-                    c.accelerator * c.amount
+                    c.accelerator * c.amount  # type: ignore
                     for cc in other_claims
-                    for c in cc.resources
+                    for c in cc.resources  # type: ignore
                     if isinstance(c, Compute)
                 ]
             ):
@@ -189,9 +189,9 @@ class Scheduler:
                 )
             if claim_storage_block > total_infra_storage_block - sum(
                 [
-                    s.amount
+                    s.amount  # type: ignore
                     for sc in other_claims
-                    for s in sc.resources
+                    for s in sc.resources  # type: ignore
                     if isinstance(s, Storage)
                 ]
             ):

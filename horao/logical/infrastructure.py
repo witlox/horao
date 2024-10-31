@@ -26,7 +26,7 @@ class LogicalInfrastructure:
         self,
         infrastructure: Optional[Dict[DataCenter, List[DataCenterNetwork]]] = None,
         constraints: Optional[Dict[Tenant, Constraint]] = None,
-        claims: Optional[Dict[Tenant, Claim]] = None,
+        claims: Optional[Dict[Tenant, List[Claim]]] = None,
     ) -> None:
         """
         Initialize the logical infrastructure
@@ -64,7 +64,9 @@ class LogicalInfrastructure:
     def pop(self, key: DataCenter) -> List[DataCenterNetwork]:
         return self.infrastructure.pop(key)
 
-    def __eq__(self, other: LogicalInfrastructure) -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, LogicalInfrastructure):
+            return False
         for k in self.infrastructure.keys():
             if k not in other.infrastructure:
                 return False
@@ -72,9 +74,6 @@ class LogicalInfrastructure:
                 if l != r:
                     return False
         return True
-
-    def __ne__(self, other: LogicalInfrastructure) -> bool:
-        return not self == other
 
     def __setitem__(self, key, value) -> None:
         self.infrastructure[key] = value
@@ -119,18 +118,18 @@ class LogicalInfrastructure:
                     if isinstance(node, Server):
                         compute.append(
                             Compute(
-                                sum([n.cores for n in node.cpus]),
-                                sum([r.size_gb for r in node.rams]),
+                                sum([n.cores for n in node.cpus]),  # type: ignore
+                                sum([r.size_gb for r in node.rams]),  # type: ignore
                                 len(node.accelerators) > 0,
                                 1,
                             )
                         )
                     if isinstance(node, Blade):
-                        for n in node.nodes():
+                        for n in node.nodes:  # type: ignore
                             compute.append(
                                 Compute(
-                                    sum([c.cores for c in n.cpus]),
-                                    sum([r.size_gb for r in n.rams]),
+                                    sum([c.cores for c in n.cpus]),  # type: ignore
+                                    sum([r.size_gb for r in n.rams]),  # type: ignore
                                     len(n.accelerators) > 0,
                                     len(n.modules),
                                 )
@@ -155,13 +154,13 @@ class LogicalInfrastructure:
                     if isinstance(node, Server):
                         storage.append(
                             Storage(
-                                sum([d.size_gb for d in node.disks]),
+                                sum([d.size_gb for d in node.disks]),  # type: ignore
                                 StorageType.Block,
                                 StorageClass.Hot,
                             )
                         )
                     if isinstance(node, Blade):
-                        for n in node.nodes():
+                        for n in node.nodes:  # type: ignore
                             storage.append(
                                 Storage(
                                     sum(

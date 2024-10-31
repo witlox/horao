@@ -2,8 +2,7 @@
 """Tenant as partitioning mechanism."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 from horao.logical.resource import Compute, Storage
 from horao.physical.storage import StorageType
@@ -11,14 +10,22 @@ from horao.physical.storage import StorageType
 from .claim import Reservation
 
 
-@dataclass
 class Tenant:
-    name: str
-    owner: str
-    delegates: List[str] = field(default_factory=list)
-    constraints: List[Constraint] = field(default_factory=list)
+    def __init__(
+        self,
+        name: str,
+        owner: str,
+        delegates: Optional[List[str]] = None,
+        constraints: Optional[List[Constraint]] = None,
+    ):
+        self.name = name
+        self.owner = owner
+        self.delegates = delegates if delegates is not None else []
+        self.constraints = constraints if constraints is not None else []
 
-    def __eq__(self, other: Tenant):
+    def __eq__(self, other):
+        if not isinstance(other, Tenant):
+            return False
         return self.name == other.name
 
     def __hash__(self):
@@ -47,18 +54,21 @@ class Tenant:
                 raise ValueError("Claim exceeds tenant limits")
 
 
-@dataclass
 class Constraint:
-    compute_limits: List[Compute]
-    storage_limits: List[Storage]
 
-    def __eq__(self, other: Constraint):
+    def __init__(self, compute_limits: List[Compute], storage_limits: List[Storage]):
+        self.compute_limits = compute_limits
+        self.storage_limits = storage_limits
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Constraint):
+            return False
         return (
             self.compute_limits == other.compute_limits
             and self.storage_limits == other.storage_limits
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.compute_limits, self.storage_limits))
 
     def total_block_storage_limit(self) -> int:

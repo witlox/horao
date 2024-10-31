@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-#
-"""Main module for the HORAO API, for testing only!"""
+"""Main entrypoint for running HORAO in development mode, for testing only!"""
 import os
 
 import uvicorn  # type: ignore
