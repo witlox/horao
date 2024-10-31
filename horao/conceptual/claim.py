@@ -4,17 +4,18 @@ from __future__ import annotations
 
 from abc import ABC
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 
 from horao.logical.data_center import DataCenter, DataCenterNetwork
-from horao.logical.resource import ResourceDefinition
-from horao.physical.hardware import Hardware
+from horao.logical.resource import Compute, ResourceDefinition, Storage
 from horao.physical.computer import Computer
+from horao.physical.hardware import Hardware
+from horao.physical.storage import StorageType
 from horao.rbac.roles import (
+    Delegate,
+    NetworkEngineer,
     SecurityEngineer,
     SystemEngineer,
-    NetworkEngineer,
-    Delegate,
     TenantOwner,
 )
 
@@ -22,7 +23,18 @@ from horao.rbac.roles import (
 class Claim(ABC):
     """Base Class for Claims"""
 
-    def __init__(self, name: str, start: Optional[datetime], end: Optional[datetime]):
+    def __init__(
+        self,
+        name: str,
+        start: Optional[datetime],
+        end: Optional[datetime],
+    ):
+        """
+        Initialize the claim on a logical infrastructure for a given tenant.
+        :param name: name of the claim
+        :param start: start time
+        :param end: end time
+        """
         self.name = name
         self.start = start
         self.end = end
@@ -127,3 +139,36 @@ class Reservation(Claim):
 
     def __hash__(self) -> int:
         return hash((self.name, self.start, self.end, self.end_user, self.resources))
+
+    def extract(self) -> tuple[int, int, int, int]:
+        """
+        Extract the details of a claim.
+        :return: tuple of compute CPU, RAM (in GB), accelerators and block storage (in TB) or None
+        """
+        claim_compute_cpu = sum(
+            [c.cpu * c.amount for c in self.resources if isinstance(c, Compute)]
+        )
+        claim_compute_ram = sum(
+            [c.ram * c.amount for c in self.resources if isinstance(c, Compute)]
+        )
+        claim_compute_accelerator = sum(
+            [
+                c.amount
+                for c in self.resources
+                if isinstance(c, Compute) and c.accelerator
+            ]
+        )
+        claim_storage_block = sum(
+            [
+                s.amount
+                for s in self.resources
+                if isinstance(s, Storage)
+                if s.storage_type is StorageType.Block
+            ]
+        )
+        return (
+            claim_compute_cpu,
+            claim_compute_ram,
+            claim_compute_accelerator,
+            claim_storage_block,
+        )

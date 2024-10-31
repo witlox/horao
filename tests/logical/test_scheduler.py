@@ -4,12 +4,12 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from horao.conceptual.claim import Reservation
 from horao.conceptual.osi_layers import LinkLayer
 from horao.conceptual.tenant import Constraint, Tenant
-from horao.logical.claim import Reservation
 from horao.logical.data_center import DataCenter, DataCenterNetwork
 from horao.logical.infrastructure import Compute, LogicalInfrastructure
-from horao.logical.scheduler import BasicScheduler
+from horao.logical.scheduler import Scheduler, SchedulerFeature
 from horao.physical.component import CPU, RAM
 from horao.physical.composite import Cabinet
 from horao.physical.computer import Server
@@ -103,14 +103,10 @@ def initialize():
 def test_basic_scheduler_infrastructure_limits():
     dc, dcn = initialize()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
-    scheduler = BasicScheduler(infrastructure)
-    assert scheduler._get_infrastructure_limits() == (16, 96, 0, 0)
+    assert infrastructure.limits() == (16, 96, 0, 0)
 
 
 def test_extract_claim_details():
-    dc, dcn = initialize()
-    infrastructure = LogicalInfrastructure({dc: [dcn]})
-    scheduler = BasicScheduler(infrastructure)
     owner = TenantOwner()
     start = datetime.now() + timedelta(hours=1)
     claim = Reservation(
@@ -121,18 +117,13 @@ def test_extract_claim_details():
         [Compute(4, 4, False, 1)],
         False,
     )
-    assert scheduler._extract_claim_details(claim) == (4, 4, 0, 0)
+    assert claim.extract() == (4, 4, 0, 0)
 
 
 def test_tenant_constraints():
-    dc, dcn = initialize()
     owner = TenantOwner()
-    tenant = Tenant("test1", owner)
-    constraint = Constraint(tenant, [Compute(1, 1, False, 1)], [])
-    infrastructure = LogicalInfrastructure(
-        infrastructure={dc: [dcn]}, constraints={tenant: constraint}
-    )
-    scheduler = BasicScheduler(infrastructure)
+    constraint = Constraint([Compute(1, 1, False, 1)], [])
+    tenant = Tenant("test1", owner, constraints=[constraint])
     start = datetime.now() + timedelta(hours=1)
     claim = Reservation(
         "test1-test",
@@ -143,7 +134,7 @@ def test_tenant_constraints():
         False,
     )
     with pytest.raises(ValueError) as e:
-        scheduler._check_tenant_constraints(claim, tenant)
+        tenant.check_constraints(claim)
     assert "Claim exceeds tenant limits" in str(e.value)
 
 
@@ -151,7 +142,7 @@ def test_basic_scheduler_available_resources_can_be_claimed():
     dc, dcn = initialize()
     assert dcn.get_topology() == NetworkTopology.Tree
     infrastructure = LogicalInfrastructure({dc: [dcn]})
-    scheduler = BasicScheduler(infrastructure)
+    scheduler = Scheduler(infrastructure)
     owner = TenantOwner()
     tenant = Tenant("test2", owner)
     start = datetime.now() + timedelta(hours=1)
@@ -169,7 +160,7 @@ def test_basic_scheduler_available_resources_can_be_claimed():
 def test_basic_scheduler_raises_error_filling_infrastructure():
     dc, dcn = initialize()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
-    scheduler = BasicScheduler(infrastructure)
+    scheduler = Scheduler(infrastructure)
     owner = TenantOwner()
     tenant = Tenant("test3", owner)
     start = datetime.now() + timedelta(hours=1)
@@ -207,7 +198,7 @@ def test_basic_scheduler_raises_error_filling_infrastructure():
 def test_claim_is_scheduled_when_enough_capacity_exists_in_time():
     dc, dcn = initialize()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
-    scheduler = BasicScheduler(infrastructure)
+    scheduler = Scheduler(infrastructure)
     owner = TenantOwner()
     tenant = Tenant("test4", owner)
     start = datetime.now() + timedelta(hours=1)
@@ -229,4 +220,7 @@ def test_claim_is_scheduled_when_enough_capacity_exists_in_time():
         False,
     )
     assert scheduler.schedule(claim1, tenant) == start
+    with pytest.raises(ValueError) as e:
+        scheduler.schedule(claim2, tenant)
+    scheduler = Scheduler(infrastructure, [SchedulerFeature.DynamicStart])
     assert scheduler.schedule(claim2, tenant) >= end

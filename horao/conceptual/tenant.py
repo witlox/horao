@@ -2,7 +2,6 @@
 """Tenant as partitioning mechanism."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from typing import List
 
@@ -10,13 +9,15 @@ from horao.logical.resource import Compute, Storage
 from horao.physical.storage import StorageType
 from horao.rbac.roles import Delegate, TenantOwner
 
+from .claim import Reservation
+
 
 @dataclass
 class Tenant:
     name: str
     owner: TenantOwner
     delegates: List[Delegate] = field(default_factory=list)
-    shares: int = int(os.getenv("SHARES", 100))
+    constraints: List[Constraint] = field(default_factory=list)
 
     def __eq__(self, other: Tenant):
         return self.name == other.name
@@ -24,22 +25,42 @@ class Tenant:
     def __hash__(self):
         return hash(self.name)
 
+    def check_constraints(self, reservation: Reservation) -> None:
+        """
+        Check if the claim exceeds tenant constraints
+        :param reservation: the claim to check
+        :return: None if the claim is within tenant constraints
+        :raises ValueError: if the claim exceeds tenant constraints
+        """
+        (
+            compute_cpu_claim,
+            compute_ram_claim,
+            accelerator_claim,
+            block_storage_claim,
+        ) = reservation.extract()
+        for constraint in self.constraints:
+            if (
+                compute_cpu_claim > constraint.total_cpu_compute_limit()
+                or compute_ram_claim > constraint.total_ram_compute_limit()
+                or accelerator_claim > constraint.total_accelerator_compute_limit()
+                or block_storage_claim > constraint.total_block_storage_limit()
+            ):
+                raise ValueError("Claim exceeds tenant limits")
+
 
 @dataclass
 class Constraint:
-    target: Tenant
     compute_limits: List[Compute]
     storage_limits: List[Storage]
 
     def __eq__(self, other: Constraint):
         return (
-            self.target == other.target
-            and self.compute_limits == other.compute_limits
+            self.compute_limits == other.compute_limits
             and self.storage_limits == other.storage_limits
         )
 
     def __hash__(self):
-        return hash((self.target, self.compute_limits, self.storage_limits))
+        return hash((self.compute_limits, self.storage_limits))
 
     def total_block_storage_limit(self) -> int:
         return sum(

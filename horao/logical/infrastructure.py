@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from horao.conceptual.claim import Claim, Reservation
 from horao.conceptual.decorators import instrument_class_function
 from horao.conceptual.tenant import Constraint, Tenant
-from horao.logical.claim import Claim
 from horao.logical.data_center import DataCenter, DataCenterNetwork
 from horao.logical.resource import Compute, Storage
 from horao.physical.composite import Blade
@@ -26,7 +26,7 @@ class LogicalInfrastructure:
         self,
         infrastructure: Optional[Dict[DataCenter, List[DataCenterNetwork]]] = None,
         constraints: Optional[Dict[Tenant, Constraint]] = None,
-        claims: Optional[List[Claim]] = None,
+        claims: Optional[Dict[Tenant, Claim]] = None,
     ) -> None:
         """
         Initialize the logical infrastructure
@@ -36,7 +36,7 @@ class LogicalInfrastructure:
         """
         self.infrastructure = infrastructure or {}
         self.constraints = constraints or {}
-        self.claims = claims or []
+        self.claims = claims or {}
 
     def clear(self) -> None:
         self.infrastructure.clear()
@@ -175,3 +175,56 @@ class LogicalInfrastructure:
                                 )
                             )
         return storage
+
+    def limits(self) -> tuple[int, int, int, int]:
+        """
+        Get the total infrastructure limits.
+        :return: tuple of total compute CPUs, RAM (in GB), accelerators and block storage (in TB)
+        """
+        total_infra_compute_cpu = sum([c.cpu * c.amount for c in self.total_compute()])
+        total_infra_compute_ram = sum([c.ram * c.amount for c in self.total_compute()])
+        total_infra_compute_accelerator = sum(
+            [c.amount for c in self.total_compute() if c.accelerator]
+        )
+        total_infra_storage_block = sum(
+            [
+                s.amount
+                for s in self.total_storage()
+                if s.storage_type is StorageType.Block
+            ]
+        )
+        return (
+            total_infra_compute_cpu,
+            total_infra_compute_ram,
+            total_infra_compute_accelerator,
+            total_infra_storage_block,
+        )
+
+    def check_claim(self, reservation: Reservation) -> None:
+        """
+        Check if the claim exceeds infrastructure limits
+        :param reservation: the claim to check
+        :return: None
+        :raises ValueError: if the claim exceeds infrastructure limits
+        """
+        (
+            claim_compute_cpu,
+            claim_compute_ram,
+            claim_compute_accelerator,
+            claim_storage_block,
+        ) = reservation.extract()
+        (
+            total_infra_compute_cpu,
+            total_infra_compute_ram,
+            total_infra_compute_accelerator,
+            total_infra_storage_block,
+        ) = self.limits()
+        if claim_compute_cpu > total_infra_compute_cpu:
+            raise ValueError("Claim exceeds compute CPU infrastructure limits")
+        if claim_compute_ram > total_infra_compute_ram:
+            raise ValueError("Claim exceeds compute RAM infrastructure limits")
+        if claim_compute_accelerator > total_infra_compute_accelerator:
+            raise ValueError("Claim exceeds compute accelerator infrastructure limits")
+        if claim_storage_block > total_infra_storage_block:
+            raise ValueError("Claim exceeds block storage infrastructure limits")
+        return None
