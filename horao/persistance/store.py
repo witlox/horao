@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-#
+"""Storage abstraction."""
 import json
 import logging
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 
 from redis import asyncio as redis
 

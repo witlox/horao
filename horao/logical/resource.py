@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-#
+"""Higher level abstracted resources that can be claimed.
+
+Various resources that are part of reservation claims.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field

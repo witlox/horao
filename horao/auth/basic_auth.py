@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-#
-"""Authorization module for the application.
+"""Basic Authorization for testing the application.
 
 Very basic auth module, DO NOT USE IN PRODUCTION!
 Meant for development purpose only.
 """
 import base64
+import binascii
 import os
 
-import binascii
-from hashlib import sha256
-
-from starlette.authentication import AuthenticationBackend, AuthenticationError, AuthCredentials, SimpleUser  # type: ignore
-from starlette.requests import Request, HTTPException  # type: ignore
+from starlette.authentication import (  # type: ignore
+    AuthCredentials,
+    AuthenticationBackend,
+    AuthenticationError,
+    SimpleUser,
+)
+from starlette.requests import HTTPException, Request  # type: ignore
 from starlette.responses import JSONResponse  # type: ignore
-
 
 basic_auth_structure = {
     "netadm": {"password": "secret", "role": "network.admin"},
@@ -44,25 +46,3 @@ class BasicAuthBackend(AuthenticationBackend):
                 status_code=401, detail=f"access not allowed for {username}"
             )
         return AuthCredentials(["authenticated"]), SimpleUser(username)
-
-
-class PeerAuthBackend(AuthenticationBackend):
-    async def authenticate(self, conn):
-        if "Authorization" not in conn.headers:
-            return
-        auth = conn.headers["Authorization"]
-        try:
-            scheme, credentials = auth.split()
-            if scheme.lower() != "digest":
-                return
-            decoded = base64.b64decode(credentials).decode("ascii")
-        except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
-            raise AuthenticationError(f"Invalid digest credentials for peer ({exc})")
-        if (
-            not sha256(decoded.encode("utf-8")).hexdigest()
-            == sha256(os.getenv("PEER_SECRET").encode("utf-8")).hexdigest()
-        ):
-            raise HTTPException(
-                status_code=401, detail=f"access not allowed for {conn.client.host}"
-            )
-        return AuthCredentials(["peer"]), SimpleUser(conn.client.host)

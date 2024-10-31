@@ -7,25 +7,22 @@ orchestrating the resources on various control planes in various datacenters. Al
 platforms like Kubernetes, OpenStack, Slurm, Clouds, etc. are defined here. The models are used to model the hardware
 and software resources of the system.
 """
-import os
 import logging
+import os
 
+from starlette.applications import Starlette  # type: ignore
+from starlette.middleware import Middleware  # type: ignore
 from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.middleware.cors import CORSMiddleware  # type: ignore
 from starlette.responses import HTMLResponse
 from starlette.routing import Route
+from starlette.schemas import SchemaGenerator  # type: ignore
 
 import horao.api
 import horao.api.synchronization
 import horao.auth
-
-
-from starlette.applications import Starlette  # type: ignore
-from starlette.middleware import Middleware  # type: ignore
-from starlette.middleware.cors import CORSMiddleware  # type: ignore
-from starlette.schemas import SchemaGenerator  # type: ignore
-
-from horao.auth.basic_auth import BasicAuthBackend, PeerAuthBackend
-
+from horao.auth.basic_auth import BasicAuthBackend
+from horao.auth.peer import PeerAuthBackend
 
 schemas = SchemaGenerator(
     {"openapi": "3.0.0", "info": {"title": "HORAO API", "version": "1.0"}}
