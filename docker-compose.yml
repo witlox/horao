@@ -1,10 +1,24 @@
 version: '3'
 
 services:
-  basic-service:
+  redis:
+    image: redis:7.4.1
+    container_name: redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - REDIS_AOF_ENABLED=yes
+  horao:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "8080:8080"
 
+volumes:
+    redis_data:

@@ -23,7 +23,6 @@ from starlette.applications import Starlette  # type: ignore
 from starlette.middleware import Middleware  # type: ignore
 from starlette.middleware.cors import CORSMiddleware  # type: ignore
 from starlette.schemas import SchemaGenerator  # type: ignore
-from dotenv import load_dotenv  # type: ignore
 
 from horao.auth.basic_auth import BasicAuthBackend, PeerAuthBackend
 
@@ -69,10 +68,6 @@ def init_api() -> Starlette:
         ),
         Route("/openapi.json", endpoint=openapi_schema, include_in_schema=False),
     ]
-    module_root = os.path.dirname(os.path.dirname(__file__))
-    environment = os.environ.get("ENVIRONMENT", "development")
-    dotenv_path = module_root + "/horao/env/" + f".env.{environment}"
-    load_dotenv(dotenv_path)
     if bool(os.getenv("UI", False)):
         routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
     middleware = [

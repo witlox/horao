@@ -5,16 +5,12 @@ import os
 
 import uvicorn  # type: ignore
 
-from horao import init_api
-
-app = init_api()
-
 
 def main():
     os.environ["ENVIRONMENT"] = "development"
     os.environ["DEBUG"] = "True"
     uvicorn.run(
-        "__main__:app",
+        "horao:init_api",
         host="127.0.0.1",
         port=8081,
         log_level="debug",

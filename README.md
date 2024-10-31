@@ -19,18 +19,34 @@ For development please check out the [Architecture](docs/Architecture.md) and [D
 - (Optional but recommended) NTP
 
 ### Steps
-
+The command line way:
+```bash 
 1. Clone the repository
-2. Install the required packages (`poetry install`)
-3. Install the project (`poetry install`)
-4. Run the project (`horao`)
+2. Create a virtual environment (`python -m venv .venv`)
+3. Activate the virtual environment (`source .venv/bin/activate`)
+4. Install poetry (`pip install poetry`)
+5. Add the dotenv plugin to poetry (`poetry plugin add poetry-dotenv-plugin`)
+6. Install the required packages (`poetry install`)
+4. Run the project
+  a. `poetry run python horao/main.py`
+  b. `poetry run gunicorn horao:init_api -k uvicorn.workers.UvicornWorker --reload`
+```
+
+The docker way, either use the `devcontainer` or run with `docker-compose`:
+```bash
+1. Clone the repository
+2. Run the project
+  a. `docker-compose up`
+  b. `docker-compose -f docker-compose.yml up`
+```
 
 ## Settings
 
-The settings are stored in a `.env` file. The following settings are available:
+The settings are stored in a `.env` file. The default selected by poetry is `.env` which is configured for development.
+The following settings are available:
 - DEBUG: boolean, default=False; set to True to enable debug mode
 - UI: boolean, default=False; set to True to enable the UI for the API
 - CORS: string, default="*"; set to the allowed origins for CORS
 - PEER_SECRET: string, default=""; set the secret for authenticating peers 
 - CLOCK_OFFSET: float, default=0.0; set the allowed clock offset for synchronization
-- SHARES: int, default=1; set the number of shares for the fair-share scheduler
+- REDIS_URL: string, default="redis://redis:6379/0"; set the URL for the Redis database
