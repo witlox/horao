@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: poetry build and test
+    name: poetry run code coverage
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -36,5 +36,13 @@ jobs:
         uses: zlatko-ms/pycovcheck@v2
         with:
           coveragefile: ./coverage.xml
-          packages: horao:0.80
+          packages: |
+            horoa.api:0.50
+            horoa.auth:0.60
+            horoa.conceptual:0.60
+            horao.controllers:0.80
+            horao.logical:0.60
+            horao.persistence:0.1
+            horao.physical:0.60
+            horao.rbac:0.50
 

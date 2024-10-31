@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: poetry build and test
+    name: poetry run mypy type checker
     runs-on: ubuntu-latest
     strategy:
       matrix:
