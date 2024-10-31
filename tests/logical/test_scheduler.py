@@ -22,7 +22,6 @@ from horao.physical.network import (
     Switch,
     SwitchType,
 )
-from horao.rbac.roles import TenantOwner
 
 os.environ["ENVIRONMENT"] = "development"
 
@@ -107,31 +106,25 @@ def test_basic_scheduler_infrastructure_limits():
 
 
 def test_extract_claim_details():
-    owner = TenantOwner()
     start = datetime.now() + timedelta(hours=1)
     claim = Reservation(
-        "test",
-        start,
-        datetime.now() + timedelta(days=1),
-        owner,
-        [Compute(4, 4, False, 1)],
-        False,
+        name="test",
+        resources=[Compute(4, 4, False, 1)],
+        start=start,
+        end=datetime.now() + timedelta(days=1),
     )
     assert claim.extract() == (4, 4, 0, 0)
 
 
 def test_tenant_constraints():
-    owner = TenantOwner()
     constraint = Constraint([Compute(1, 1, False, 1)], [])
-    tenant = Tenant("test1", owner, constraints=[constraint])
+    tenant = Tenant("test1", "owner", constraints=[constraint])
     start = datetime.now() + timedelta(hours=1)
     claim = Reservation(
-        "test1-test",
-        start,
-        datetime.now() + timedelta(days=1),
-        owner,
-        [Compute(4, 4, False, 1)],
-        False,
+        name="test1-test",
+        resources=[Compute(4, 4, False, 1)],
+        start=start,
+        end=datetime.now() + timedelta(days=1),
     )
     with pytest.raises(ValueError) as e:
         tenant.check_constraints(claim)
@@ -143,16 +136,13 @@ def test_basic_scheduler_available_resources_can_be_claimed():
     assert dcn.get_topology() == NetworkTopology.Tree
     infrastructure = LogicalInfrastructure({dc: [dcn]})
     scheduler = Scheduler(infrastructure)
-    owner = TenantOwner()
-    tenant = Tenant("test2", owner)
+    tenant = Tenant("test2", "owner")
     start = datetime.now() + timedelta(hours=1)
     claim = Reservation(
-        "test2-test",
-        start,
-        datetime.now() + timedelta(days=1),
-        owner,
-        [Compute(4, 4, False, 1)],
-        False,
+        name="test2-test",
+        start=start,
+        resources=[Compute(4, 4, False, 1)],
+        end=datetime.now() + timedelta(days=1),
     )
     assert scheduler.schedule(claim, tenant) == start
 
@@ -161,32 +151,25 @@ def test_basic_scheduler_raises_error_filling_infrastructure():
     dc, dcn = initialize()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
     scheduler = Scheduler(infrastructure)
-    owner = TenantOwner()
-    tenant = Tenant("test3", owner)
+    tenant = Tenant("test3", "owner")
     start = datetime.now() + timedelta(hours=1)
     claim1 = Reservation(
-        "test3-test1",
-        start,
-        datetime.now() + timedelta(days=1),
-        owner,
-        [Compute(8, 4, False, 1)],
-        False,
+        name="test3-test1",
+        start=start,
+        resources=[Compute(8, 4, False, 1)],
+        end=datetime.now() + timedelta(days=1),
     )
     claim2 = Reservation(
-        "test3-test2",
-        start,
-        datetime.now() + timedelta(days=1),
-        owner,
-        [Compute(8, 8, False, 1)],
-        False,
+        name="test3-test2",
+        start=start,
+        resources=[Compute(8, 8, False, 1)],
+        end=datetime.now() + timedelta(days=1),
     )
     claim3 = Reservation(
-        "test3-test3",
-        start,
-        datetime.now() + timedelta(days=1),
-        owner,
-        [Compute(8, 16, False, 1)],
-        False,
+        name="test3-test3",
+        start=start,
+        resources=[Compute(8, 16, False, 1)],
+        end=datetime.now() + timedelta(days=1),
     )
     assert scheduler.schedule(claim1, tenant) == start
     assert scheduler.schedule(claim2, tenant) == start
@@ -199,25 +182,19 @@ def test_claim_is_scheduled_when_enough_capacity_exists_in_time():
     dc, dcn = initialize()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
     scheduler = Scheduler(infrastructure)
-    owner = TenantOwner()
-    tenant = Tenant("test4", owner)
+    tenant = Tenant("test4", "owner")
     start = datetime.now() + timedelta(hours=1)
     end = datetime.now() + timedelta(days=1)
     claim1 = Reservation(
-        "test4-test1",
-        start,
-        end,
-        owner,
-        [Compute(16, 4, False, 1)],
-        False,
+        name="test4-test1",
+        start=start,
+        resources=[Compute(16, 4, False, 1)],
+        end=end,
     )
     claim2 = Reservation(
-        "test4-test2",
-        None,
-        end + timedelta(hours=1),
-        owner,
-        [Compute(16, 24, False, 1)],
-        False,
+        name="test4-test2",
+        resources=[Compute(16, 24, False, 1)],
+        end=end + timedelta(hours=1),
     )
     assert scheduler.schedule(claim1, tenant) == start
     with pytest.raises(ValueError) as e:

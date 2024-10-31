@@ -2,11 +2,10 @@
 """Serialize and Deserialize Horao objects to JSON"""
 import json
 from datetime import date, datetime
-from multiprocessing.resource_tracker import register
-from typing import Any, Tuple
 
 from networkx.convert import from_dict_of_dicts, to_dict_of_dicts
 
+from horao.conceptual.claim import Reservation
 from horao.conceptual.crdt import (
     LastWriterWinsMap,
     LastWriterWinsRegister,
@@ -14,8 +13,10 @@ from horao.conceptual.crdt import (
 )
 from horao.conceptual.osi_layers import LinkLayer
 from horao.conceptual.support import LogicalClock, Update, UpdateType
+from horao.conceptual.tenant import Constraint, Tenant
 from horao.logical.data_center import DataCenter, DataCenterNetwork
 from horao.logical.infrastructure import LogicalInfrastructure
+from horao.logical.resource import Compute, Storage
 from horao.physical.component import CPU, RAM, Accelerator, Disk
 from horao.physical.composite import Blade, Cabinet, Chassis, Node
 from horao.physical.computer import Module, Server
@@ -31,6 +32,8 @@ from horao.physical.network import (
     SwitchType,
 )
 from horao.physical.status import DeviceStatus
+from horao.physical.storage import StorageType
+from horao.rbac import TenantOwner
 
 
 class HoraoEncoder(json.JSONEncoder):
@@ -334,7 +337,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "type": "LogicalInfrastructure",
                 "infrastructure": {},
                 "constraints": {},
-                "claims": [],
+                "claims": {},
             }
             for k, v in obj.infrastructure.items():
                 result["infrastructure"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
@@ -344,9 +347,58 @@ class HoraoEncoder(json.JSONEncoder):
                 result["constraints"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
                     v, cls=HoraoEncoder
                 )
-            for c in obj.claims:
-                result["claims"].append(json.dumps(c, cls=HoraoEncoder))
+            for k, v in obj.claims.items():
+                result["claims"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
+                    v, cls=HoraoEncoder
+                )
             return result
+        if isinstance(obj, Storage):
+            return {
+                "type": "Storage",
+                "storage_type": obj.storage_type.value,
+                "storage_class": obj.storage_class.value,
+                "capacity": obj.amount,
+            }
+        if isinstance(obj, Compute):
+            return {
+                "type": "Compute",
+                "cpu": obj.cpu,
+                "ram": obj.ram,
+                "accelerator": obj.accelerator,
+                "amount": obj.amount,
+            }
+        if isinstance(obj, Constraint):
+            return {
+                "compute_limits": json.dumps(obj.compute_limits, cls=HoraoEncoder),
+                "storage_limits": json.dumps(obj.storage_limits, cls=HoraoEncoder),
+            }
+        if isinstance(obj, TenantOwner):
+            return {
+                "type": "TenantOwner",
+                "name": obj.name,
+            }
+        if isinstance(obj, Tenant):
+            return {
+                "type": "Tenant",
+                "name": obj.name,
+                "owner": obj.owner,
+                "constraints": json.dumps(obj.constraints, cls=HoraoEncoder),
+            }
+        if isinstance(obj, Reservation):
+            return {
+                "type": "Reservation",
+                "name": obj.name,
+                "start": obj.start,
+                "end": obj.end,
+                "end_user": obj.end_user,
+                "resources": json.dumps(obj.resources, cls=HoraoEncoder),
+                "maximal_resources": (
+                    json.dumps(obj.maximal_resources, cls=HoraoEncoder)
+                    if obj.maximal_resources
+                    else None
+                ),
+                "hsn_only": obj.hsn_only,
+            }
         return json.JSONEncoder.default(self, obj)
 
 
@@ -666,13 +718,54 @@ class HoraoDecoder(json.JSONDecoder):
                 constraints[json.loads(k, cls=HoraoDecoder)] = json.loads(
                     v, cls=HoraoDecoder
                 )
-            claims = (
-                json.loads(obj["claims"], cls=HoraoDecoder) if obj["claims"] else None
-            )
+            claims = {}
+            for k, v in obj["claims"].items():
+                claims[json.loads(k, cls=HoraoDecoder)] = json.loads(
+                    v, cls=HoraoDecoder
+                )
             return LogicalInfrastructure(
                 infrastructure=infrastructure,
                 constraints=constraints,
                 claims=claims,
             )
-
+        if "type" in obj and obj["type"] == "Storage":
+            return Storage(
+                capacity=obj["capacity"],
+                storage_type=StorageType(obj["storage_type"]),
+                storage_class=obj["storage_class"],
+            )
+        if "type" in obj and obj["type"] == "Compute":
+            return Compute(
+                cpu=obj["cpu"],
+                ram=obj["ram"],
+                accelerator=obj["accelerator"],
+                amount=obj["amount"],
+            )
+        if "type" in obj and obj["type"] == "Constraint":
+            return Constraint(
+                compute_limits=json.loads(obj["compute_limits"], cls=HoraoDecoder),
+                storage_limits=json.loads(obj["storage_limits"], cls=HoraoDecoder),
+            )
+        if "type" in obj and obj["type"] == "TenantOwner":
+            return TenantOwner()
+        if "type" in obj and obj["type"] == "Tenant":
+            return Tenant(
+                name=obj["name"],
+                owner=obj["owner"],
+                constraints=json.loads(obj["constraints"], cls=HoraoDecoder),
+            )
+        if "type" in obj and obj["type"] == "Reservation":
+            return Reservation(
+                name=obj["name"],
+                start=obj["start"],
+                end=obj["end"],
+                end_user=obj["end_user"],
+                resources=json.loads(obj["resources"], cls=HoraoDecoder),
+                maximal_resources=(
+                    json.loads(obj["maximal_resources"], cls=HoraoDecoder)
+                    if obj["maximal_resources"]
+                    else None
+                ),
+                hsn_only=obj["hsn_only"],
+            )
         return obj

@@ -110,10 +110,10 @@ class Reservation(Claim):
     def __init__(
         self,
         name: str,
-        start: Optional[datetime],
-        end: Optional[datetime],
-        end_user: Delegate | TenantOwner,
         resources: List[ResourceDefinition],
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        maximal_resources: Optional[List[ResourceDefinition]] = None,
         hsn_only: bool = True,
     ):
         """
@@ -121,47 +121,58 @@ class Reservation(Claim):
         :param name: logical name
         :param start: start date, if empty find the best fit
         :param end: end date, if empty assume forever
-        :param end_user: who is making the reservation for the resources
-        :param resources: actual resources being reserved
+        :param resources: actual resources being reserved, or minimal if maximal_resources is set
+        :param maximal_resources: maximal resources that can be used
         :param hsn_only: resources can only be used if directly connected to the high speed network
         """
         super().__init__(name, start, end)
-        self.end_user = end_user
         self.resources = resources
+        self.maximal_resources = maximal_resources or []
         self.hsn_only = hsn_only
 
     def __eq__(self, other: Reservation) -> bool:
         return (
             super().__eq__(other)
-            and self.end_user == other.end_user
             and self.resources == other.resources
+            and self.maximal_resources == other.maximal_resources
+            and self.hsn_only == other.hsn_only
         )
 
     def __hash__(self) -> int:
-        return hash((self.name, self.start, self.end, self.end_user, self.resources))
+        return hash(
+            (
+                self.name,
+                self.start,
+                self.end,
+                self.resources,
+                self.maximal_resources,
+                self.hsn_only,
+            )
+        )
 
-    def extract(self) -> tuple[int, int, int, int]:
+    def extract(self, maximal: bool = False) -> tuple[int, int, int, int]:
         """
         Extract the details of a claim.
+        :param maximal: extract maximal resources instead of minimal
         :return: tuple of compute CPU, RAM (in GB), accelerators and block storage (in TB) or None
+        :raises ValueError: if maximal resources are requested but not defined
         """
+        if maximal and not self.maximal_resources:
+            raise ValueError("No maximal resources defined")
+        resources = self.maximal_resources if maximal else self.resources
         claim_compute_cpu = sum(
-            [c.cpu * c.amount for c in self.resources if isinstance(c, Compute)]
+            [c.cpu * c.amount for c in resources if isinstance(c, Compute)]
         )
         claim_compute_ram = sum(
-            [c.ram * c.amount for c in self.resources if isinstance(c, Compute)]
+            [c.ram * c.amount for c in resources if isinstance(c, Compute)]
         )
         claim_compute_accelerator = sum(
-            [
-                c.amount
-                for c in self.resources
-                if isinstance(c, Compute) and c.accelerator
-            ]
+            [c.amount for c in resources if isinstance(c, Compute) and c.accelerator]
         )
         claim_storage_block = sum(
             [
                 s.amount
-                for s in self.resources
+                for s in resources
                 if isinstance(s, Storage)
                 if s.storage_type is StorageType.Block
             ]

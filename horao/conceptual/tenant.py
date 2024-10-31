@@ -7,7 +7,6 @@ from typing import List
 
 from horao.logical.resource import Compute, Storage
 from horao.physical.storage import StorageType
-from horao.rbac.roles import Delegate, TenantOwner
 
 from .claim import Reservation
 
@@ -15,8 +14,8 @@ from .claim import Reservation
 @dataclass
 class Tenant:
     name: str
-    owner: TenantOwner
-    delegates: List[Delegate] = field(default_factory=list)
+    owner: str
+    delegates: List[str] = field(default_factory=list)
     constraints: List[Constraint] = field(default_factory=list)
 
     def __eq__(self, other: Tenant):
