@@ -47,6 +47,12 @@ optional = true
 asyncio_mode = "auto"
 addopts = "--cov --cov-report xml"
 
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
