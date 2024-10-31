@@ -32,17 +32,7 @@ jobs:
         run: poetry install --with test --no-interaction
       - name: Test with poetry
         run: poetry run pytest
-      - name: Assert coverage of package is above 80%
-        uses: zlatko-ms/pycovcheck@v2
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v4
         with:
-          coveragefile: ./coverage.xml
-          packages: |
-            horoa.api:0.50
-            horoa.auth:0.60
-            horoa.conceptual:0.60
-            horao.controllers:0.80
-            horao.logical:0.60
-            horao.persistence:0.1
-            horao.physical:0.60
-            horao.rbac:0.50
-
+          token: ${{ secrets.CODECOV_TOKEN }}
