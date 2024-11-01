@@ -6,7 +6,8 @@ Meant for development purpose only.
 """
 import base64
 import binascii
-import os
+import logging
+from base64 import b64encode
 
 from starlette.authentication import (  # type: ignore
     AuthCredentials,
@@ -24,9 +25,10 @@ basic_auth_structure = {
 
 
 class BasicAuthBackend(AuthenticationBackend):
+    logger = logging.getLogger(__name__)
+
     async def authenticate(self, conn):
-        if os.getenv("ENVIRONMENT") == "production":
-            raise RuntimeError("Basic auth should not be used in production")
+        self.logger.warning("Basic auth should not be used in production!!!")
         if "Authorization" not in conn.headers:
             return
         auth = conn.headers["Authorization"]
@@ -42,7 +44,16 @@ class BasicAuthBackend(AuthenticationBackend):
             username not in basic_auth_structure.keys()
             or basic_auth_structure[username]["password"] != password
         ):
-            raise HTTPException(
-                status_code=401, detail=f"access not allowed for {username}"
-            )
+            raise AuthenticationError(f"access not allowed for {username}")
         return AuthCredentials(["authenticated"]), SimpleUser(username)
+
+
+def basic_auth(username, password) -> str:
+    """
+    This function returns a basic auth token for the given username and password
+    :param username: user
+    :param password: pass
+    :return: token
+    """
+    token = b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    return f"Basic {token}"

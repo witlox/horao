@@ -782,7 +782,8 @@ class CRDTList(Generic[T]):
 
     def extend(self, other: Iterable[T]) -> CRDTList[T]:
         for item in other:
-            self.hardware.set(len(self), item, hash(item))
+            if item not in self.hardware.read():
+                self.hardware.set(len(self), item, hash(item))
         return self
 
     def index(self, item: T) -> int:

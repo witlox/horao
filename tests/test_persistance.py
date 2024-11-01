@@ -4,7 +4,7 @@ from horao.conceptual.crdt import LastWriterWinsMap
 from horao.conceptual.support import LogicalClock
 from horao.logical.infrastructure import LogicalInfrastructure
 from horao.persistance.store import Store
-from tests.logical.test_scheduler import initialize
+from tests.logical.test_scheduler import initialize_logical_infrastructure
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -32,7 +32,7 @@ async def test_storing_loading_last_writer_wins_map():
 
 @pytest.mark.asyncio
 async def test_storing_loading_logical_infrastructure():
-    dc, dcn = initialize()
+    dc, dcn = initialize_logical_infrastructure()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
     store = Store(None)
     await store.save("infrastructure", infrastructure)

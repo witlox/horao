@@ -7,8 +7,8 @@ import uvicorn  # type: ignore
 
 
 def main():
-    os.environ["ENVIRONMENT"] = "development"
     os.environ["DEBUG"] = "True"
+    os.environ["UI"] = "True"
     uvicorn.run(
         "horao:init_api",
         host="127.0.0.1",

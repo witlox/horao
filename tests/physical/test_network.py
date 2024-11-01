@@ -15,9 +15,6 @@ from horao.physical.network import (
 )
 from horao.physical.status import DeviceStatus
 
-os.environ["ENVIRONMENT"] = "development"
-
-
 core_port_left = Port("ser1", "cp1", 1, "m1", DeviceStatus.Down, False, 100)
 core_port_right = Port("ser2", "cp2", 2, "m2", DeviceStatus.Down, False, 100)
 core = Switch(

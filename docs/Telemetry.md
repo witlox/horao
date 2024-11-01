@@ -1,7 +1,7 @@
 # Telemetry
 
 `HORAO` is telemetrised using [OpenTelemetry](https://opentelemetry.io). 
-Telemetry is switched on by default, but can be configured turned off by explicitly setting the environment variable `TELEMETRY` to `OFF`.
+Telemetry is switched on by default, but can be configured turned off by explicitly setting the environment variable `TELEMETRY` to `OFF` (usefull for automated tests).
 
 ```dotenv 
 TELEMETRY=OFF

@@ -92,6 +92,23 @@ class DataCenter:
                 return v.value
         raise KeyError(f"Key {key} not found")
 
+    @instrument_class_function(name="merge", level=logging.DEBUG)
+    def merge(self, other: DataCenter) -> None:
+        """
+        Merge two data centers together
+        :param other: data center to merge with
+        :return: None
+        """
+        for number, row in other.items():
+            if number in self.keys():
+                for cabinet in row:
+                    if cabinet not in self[number]:
+                        self[number].append(cabinet)
+                    else:
+                        self[number][self[number].index(cabinet)].merge(cabinet)
+            else:
+                self[number] = row
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, DataCenter):
             return False
@@ -260,6 +277,20 @@ class DataCenterNetwork:
 
     def __hash__(self):
         return hash((self.name, self.network_type))
+
+    @instrument_class_function(name="merge", level=logging.DEBUG)
+    def merge(self, other: DataCenterNetwork) -> None:
+        """
+        Merge two networks together
+        :param other: network to merge with
+        :return: None
+        """
+        for node in other.graph.nodes:
+            if node not in self.graph.nodes:
+                self.graph.add_node(node)
+        for edge in other.graph.edges:
+            if edge not in self.graph.edges:
+                self.graph.add_edge(edge[0], edge[1])
 
     @instrument_class_function(name="add", level=logging.DEBUG)
     def add(self, network_device: NetworkDevice | Computer) -> None:

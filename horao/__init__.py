@@ -20,7 +20,7 @@ from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,  # type: ignore
 )
 
-if bool(os.getenv("OLTP_HTTP", False)):
+if os.getenv("OLTP_HTTP", "False") == "False":
     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
         OTLPMetricExporter,  # type: ignore
     )
@@ -59,8 +59,8 @@ resource = Resource.create(
 
 if "OLTP_COLLECTOR_URL" in os.environ:
     oltp_url = os.getenv("OLTP_COLLECTOR_URL")
-    oltp_insecure = bool(os.getenv("OLTP_INSECURE", False))
-    oltp_http = bool(os.getenv("OLTP_HTTP", False))
+    oltp_insecure = False if os.getenv("OLTP_INSECURE", "False") == "False" else True
+    oltp_http = False if os.getenv("OLTP_HTTP", "False") == "False" else True
     trace_provider = TracerProvider(resource=resource)
     processor = BatchSpanProcessor(
         OTLPSpanExporter(
@@ -122,6 +122,14 @@ async def docs(request):
 
 
 def init_api() -> Starlette:
+    """
+    Initialize the API
+    :return: app instance
+    """
+    if os.getenv("DEBUG", "False") == "True":
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("horao.init")
     logger.debug("initializing horao")
     cors = os.getenv("CORS", "*")
@@ -136,7 +144,7 @@ def init_api() -> Starlette:
         ),
         Route("/openapi.json", endpoint=openapi_schema, include_in_schema=False),
     ]
-    if bool(os.getenv("UI", False)):
+    if os.getenv("UI", "False") == "True":
         routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
     middleware = [
         Middleware(CORSMiddleware, allow_origins=[cors]),
@@ -149,10 +157,14 @@ def init_api() -> Starlette:
     if os.getenv("TELEMETRY", "ON") == "OFF":
         logger.warning("Telemetry is turned off")
         return Starlette(
-            routes=routes, middleware=middleware, debug=bool(os.getenv("DEBUG", False))
+            routes=routes,
+            middleware=middleware,
+            debug=False if os.getenv("DEBUG", "False") == "False" else True,
         )
     return StarletteInstrumentor.instrument_app(
         Starlette(
-            routes=routes, middleware=middleware, debug=bool(os.getenv("DEBUG", False))
+            routes=routes,
+            middleware=middleware,
+            debug=False if os.getenv("DEBUG", "False") == "False" else True,
         )
     )

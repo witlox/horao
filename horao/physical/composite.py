@@ -106,6 +106,11 @@ class Cabinet(Hardware):
         self.chassis = HardwareList[Chassis](chassis)
         self.switches = NetworkList[Switch](switches)
 
+    def merge(self, other: Cabinet) -> None:
+        self.servers.extend(iter(other.servers))
+        self.chassis.extend(iter(other.chassis))
+        self.switches.extend(iter(other.switches))
+
     def __copy__(self):
         return Cabinet(
             self.serial_number,
