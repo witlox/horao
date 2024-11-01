@@ -7,6 +7,7 @@ import base64
 import binascii
 import logging
 import os
+from typing import Tuple
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
@@ -70,7 +71,9 @@ def generate_digest(username: str, password: str, secret: str, salt: bytes) -> b
     return encode(f"{username}{password}", secret, salt)
 
 
-def extract_username_password(token: bytes, secret: str, salt: bytes) -> (str, str):
+def extract_username_password(
+    token: bytes, secret: str, salt: bytes
+) -> Tuple[str, str]:
     """
     This function returns the username and password from the token
     :param token: token
@@ -78,10 +81,10 @@ def extract_username_password(token: bytes, secret: str, salt: bytes) -> (str, s
     :param salt: salt
     :return: typle of username and password
     """
-    token = decode(token, secret, salt)
+    result = decode(token, secret, salt)
     return (
-        token[0 : len(token) - len(os.getenv("PEER_KEY"))],
-        token[len(token) - len(os.getenv("PEER_KEY")) :],
+        result[0 : len(result) - len(os.getenv("PEER_KEY"))],  # type: ignore
+        result[len(result) - len(os.getenv("PEER_KEY")) :],  # type: ignore
     )
 
 
