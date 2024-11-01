@@ -10,7 +10,7 @@ def main():
     os.environ["DEBUG"] = "True"
     os.environ["UI"] = "True"
     uvicorn.run(
-        "horao:init_api",
+        "horao:init",
         host="127.0.0.1",
         port=8081,
         log_level="debug",

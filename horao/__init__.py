@@ -45,7 +45,7 @@ from starlette.schemas import SchemaGenerator  # type: ignore
 import horao.api
 import horao.api.synchronization
 import horao.auth
-from horao.auth.basic_auth import BasicAuthBackend
+from horao.auth.basic import BasicAuthBackend
 from horao.auth.peer import PeerAuthBackend
 
 LoggingInstrumentor().instrument(set_logging_format=True)
@@ -121,7 +121,7 @@ async def docs(request):
     return HTMLResponse(html)
 
 
-def init_api() -> Starlette:
+def init() -> Starlette:
     """
     Initialize the API
     :return: app instance
@@ -154,17 +154,13 @@ def init_api() -> Starlette:
         middleware.append(
             Middleware(AuthenticationMiddleware, backend=BasicAuthBackend())
         )
+    app = Starlette(
+        routes=routes,
+        middleware=middleware,
+        debug=False if os.getenv("DEBUG", "False") == "False" else True,
+    )
     if os.getenv("TELEMETRY", "ON") == "OFF":
         logger.warning("Telemetry is turned off")
-        return Starlette(
-            routes=routes,
-            middleware=middleware,
-            debug=False if os.getenv("DEBUG", "False") == "False" else True,
-        )
-    return StarletteInstrumentor.instrument_app(
-        Starlette(
-            routes=routes,
-            middleware=middleware,
-            debug=False if os.getenv("DEBUG", "False") == "False" else True,
-        )
-    )
+    else:
+        StarletteInstrumentor().instrument_app(app)
+    return app

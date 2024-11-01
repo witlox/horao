@@ -5,4 +5,5 @@ This module contains the classes and functions that are used to authorize the us
 only contains authorization. The RBAC module is used to define the roles and permissions of the users. There are
 various implementations that can be used, but some are only meant for development purpose.
 """
-from horao.auth.basic_auth import BasicAuthBackend
+from horao.auth.basic import BasicAuthBackend
+from horao.auth.peer import PeerAuthBackend, Peer

@@ -3,123 +3,83 @@
 
 Digest authentication using pre-shared key.
 """
-import base64
 import binascii
 import logging
 import os
-from typing import Tuple
+from typing import Tuple, Union
 
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import jwt
 from starlette.authentication import (
     AuthCredentials,
     AuthenticationBackend,
     AuthenticationError,
-    SimpleUser,
+    BaseUser,
 )
 
 
-def encode(text: str, secret: str, salt: bytes) -> bytes:
-    """
-    This function returns a digest auth token for the given text and secret
-    :param text: text
-    :param secret: secret
-    :param salt: salt
-    :return: token
-    """
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=390000,
-    )
-    key = base64.urlsafe_b64encode(kdf.derive(secret.encode("utf-8")))
-    fernet = Fernet(key)
-    enc_text = fernet.encrypt(text.encode("utf-8"))
-    return enc_text
+class Peer(BaseUser):
+    def __init__(self, id: str, token: str, payload, origin: str) -> None:
+        self.id = id
+        self.token = token
+        self.payload = payload
+        self.origin = origin
 
+    @property
+    def is_authenticated(self) -> bool:
+        return True
 
-def decode(token: bytes, secret: str, salt: bytes) -> str:
-    """
-    This function returns a digest auth token for the given text and secret
-    :param token: token
-    :param secret: secret
-    :param salt: salt
-    :return: text
-    """
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=390000,
-    )
-    key = base64.urlsafe_b64encode(kdf.derive(secret.encode("utf-8")))
-    fernet = Fernet(key)
-    return fernet.decrypt(token).decode("utf-8")
+    @property
+    def display_name(self) -> str:
+        return self.origin
 
+    @property
+    def identity(self) -> str:
+        return self.id
 
-def generate_digest(username: str, password: str, secret: str, salt: bytes) -> bytes:
-    """
-    This function returns a digest auth token for the given username, password, secret and salt
-    :param username: username
-    :param password: password
-    :param secret: secret
-    :param salt: salt
-    :return: bytes
-    """
-    return encode(f"{username}{password}", secret, salt)
+    def is_true(self) -> bool:
+        return self.id == self.origin
 
-
-def extract_username_password(
-    token: bytes, secret: str, salt: bytes
-) -> Tuple[str, str]:
-    """
-    This function returns the username and password from the token
-    :param token: token
-    :param secret: secret
-    :param salt: salt
-    :return: typle of username and password
-    """
-    result = decode(token, secret, salt)
-    return (
-        result[0 : len(result) - len(os.getenv("PEER_KEY"))],  # type: ignore
-        result[len(result) - len(os.getenv("PEER_KEY")) :],  # type: ignore
-    )
+    def __str__(self) -> str:
+        return f"{self.origin} -> {self.id}"
 
 
 class PeerAuthBackend(AuthenticationBackend):
     logger = logging.getLogger(__name__)
 
-    async def authenticate(self, conn):
+    async def authenticate(self, conn) -> Union[None, Tuple[AuthCredentials, BaseUser]]:
         if "Authorization" not in conn.headers:
-            return
+            return None
+        if "PEERS" in os.environ:
+            return None
+        if "PEER_SECRET" not in os.environ:
+            return None
+
         auth = conn.headers["Authorization"]
         try:
-            scheme, credentials = auth.split()
-            if scheme.lower() != "digest":
-                return
+            scheme, token = auth.split()
+            if scheme.lower() != "jwt":
+                return None
 
             peer_match_source = False
-            for peer in os.getenv("PEERS").split(","):
+            for peer in os.getenv("PEERS").split(","):  # type: ignore
                 if peer in conn.client.host:
                     self.logger.debug(f"Peer {peer} is trying to authenticate")
                     peer_match_source = True
             if not peer_match_source and os.getenv("PEER_STRICT", "True") == "True":
                 raise AuthenticationError(f"access not allowed for {conn.client.host}")
-            username, password = extract_username_password(
-                base64.b64decode(credentials),
-                os.getenv("PEER_SECRET"),
-                bytes.fromhex(os.getenv("PEER_SALT")),
+            payload = jwt.decode(token, os.getenv("PEER_SECRET"), algorithms=["HS256"])  # type: ignore
+            self.logger.debug(f"valid token for {payload['peer']}")
+            return AuthCredentials(["authenticated_peer"]), Peer(
+                id=payload["peer"],
+                token=token,
+                payload=payload,
+                origin=conn.client.host,
             )
-            for peer in os.getenv("PEERS").split(","):
-                if peer == username and password == os.getenv("PEER_KEY"):
-                    if not peer_match_source:
-                        self.logger.warning(
-                            f"Peer {peer} authenticated from different source {conn.client.host}"
-                        )
-                    return AuthCredentials(["peer"]), SimpleUser(peer)
-        except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
-            self.logger.error(f"Invalid digest credentials for peer ({exc})")
+        except (
+            ValueError,
+            UnicodeDecodeError,
+            jwt.InvalidTokenError,
+            binascii.Error,
+        ) as exc:
+            self.logger.error(f"Invalid token for peer ({exc})")
             raise AuthenticationError(f"access not allowed for {conn.client.host}")
-        raise AuthenticationError("access not allowed")

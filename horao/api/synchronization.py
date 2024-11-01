@@ -10,16 +10,25 @@ from starlette.responses import JSONResponse
 from horao.persistance import HoraoDecoder, init_session
 
 
-@requires("peer")
+@requires("authenticated_peer")
 async def synchronize(request: Request) -> JSONResponse:
     """
     responses:
       200:
         description: synchronize logical infrastructures.
         examples:
-          {"LogicalInfrastructure": b"ASc3dGJhcg=="}
+          { "LogicalInfrastructure": {
+            "type": "LogicalInfrastructure",
+            "infrastructure": {},
+            "constraints": {},
+            "claims": {},
+          }}
+      400:
+        description: Error parsing request
       403:
         description: Unauthorized
+      500:
+        description: Error synchronizing
     """
     logging.debug(f"Calling Synchronize ({request})")
     try:
@@ -31,17 +40,17 @@ async def synchronize(request: Request) -> JSONResponse:
         logical_infrastructure = json.loads(data, cls=HoraoDecoder)
         session = init_session()
         for k, v in logical_infrastructure.infrastructure.items():
-            local_dc = session.load(k.name)
+            local_dc = session.load(k.id)
             if not local_dc:
-                session.save(k.name, k)
+                session.save(k.id, k)
             else:
                 local_dc.merge(k)
-            local_dc_content = session.load(f"{k.name}.content")
+            local_dc_content = session.load(f"{k.id}.content")
             if not local_dc_content:
-                session.save(f"{k.name}.content", v)
+                session.save(f"{k.id}.content", v)
             else:
                 local_dc_content.merge(v)
     except Exception as e:
         logging.error(f"Error synchronizing: {e}")
-        return JSONResponse(status_code=400, content={"error": "Error synchronizing"})
+        return JSONResponse(status_code=500, content={"error": "Error synchronizing"})
     return JSONResponse(status_code=200, content={"status": "is alive"})
