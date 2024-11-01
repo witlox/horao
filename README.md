@@ -36,7 +36,7 @@ The docker way, either use the `devcontainer` or run with `docker-compose`:
 ```bash
 1. Clone the repository
 2. Run the project
-  a. `docker-compose up`
+  a. `docker-compose -f docker-compose.yml build`
   b. `docker-compose -f docker-compose.yml up`
 ```
 

@@ -15,6 +15,7 @@ def main():
         port=8081,
         log_level="debug",
         reload=True,
+        factory=True,
     )
 
 

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-#
+import os
 from base64 import b64encode
 
 from starlette.testclient import TestClient
@@ -18,6 +19,7 @@ def basic_auth(username, password) -> str:
 
 
 def test_ping_service_unauthorized():
+    os.environ["TELEMETRY"] = "OFF"
     ia = init_api()
     with TestClient(ia) as client:
         lg = client.get("/ping")
@@ -25,6 +27,7 @@ def test_ping_service_unauthorized():
 
 
 def test_ping_service_authorized():
+    os.environ["TELEMETRY"] = "OFF"
     ia = init_api()
     with TestClient(ia) as client:
         lg = client.get(

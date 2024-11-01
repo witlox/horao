@@ -10,12 +10,36 @@ and software resources of the system.
 import logging
 import os
 
+from opentelemetry import metrics, trace  # type: ignore
+from opentelemetry.instrumentation.logging import LoggingInstrumentor  # type: ignore
+from opentelemetry.instrumentation.starlette import (
+    StarletteInstrumentor,  # type: ignore
+)
+from opentelemetry.sdk.metrics import MeterProvider  # type: ignore
+from opentelemetry.sdk.metrics.export import (
+    PeriodicExportingMetricReader,  # type: ignore
+)
+
+if bool(os.getenv("OLTP_HTTP", False)):
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+        OTLPMetricExporter,  # type: ignore
+    )
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+        OTLPSpanExporter,  # type: ignore
+    )
+else:
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # type: ignore
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter  # type: ignore
+
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # type: ignore
+from opentelemetry.sdk.trace import TracerProvider  # type: ignore
+from opentelemetry.sdk.trace.export import BatchSpanProcessor  # type: ignore
 from starlette.applications import Starlette  # type: ignore
 from starlette.middleware import Middleware  # type: ignore
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.cors import CORSMiddleware  # type: ignore
-from starlette.responses import HTMLResponse
-from starlette.routing import Route
+from starlette.responses import HTMLResponse  # type: ignore
+from starlette.routing import Route  # type: ignore
 from starlette.schemas import SchemaGenerator  # type: ignore
 
 import horao.api
@@ -23,6 +47,51 @@ import horao.api.synchronization
 import horao.auth
 from horao.auth.basic_auth import BasicAuthBackend
 from horao.auth.peer import PeerAuthBackend
+
+LoggingInstrumentor().instrument(set_logging_format=True)
+
+resource = Resource.create(
+    {
+        "service.name": "horao",
+        "service.instance.id": os.uname().nodename,
+    }
+)
+
+if "OLTP_COLLECTOR_URL" in os.environ:
+    oltp_url = os.getenv("OLTP_COLLECTOR_URL")
+    oltp_insecure = bool(os.getenv("OLTP_INSECURE", False))
+    oltp_http = bool(os.getenv("OLTP_HTTP", False))
+    trace_provider = TracerProvider(resource=resource)
+    processor = BatchSpanProcessor(
+        OTLPSpanExporter(
+            endpoint=f"{oltp_url}/v1/traces",
+            insecure=oltp_insecure,
+        )
+        if oltp_http
+        else OTLPSpanExporter(
+            endpoint=f"{oltp_url}",
+            insecure=oltp_insecure,
+        )
+    )
+    trace_provider.add_span_processor(processor)
+    trace.set_tracer_provider(trace_provider)
+
+    reader = PeriodicExportingMetricReader(
+        (
+            OTLPMetricExporter(
+                endpoint=f"{oltp_url}/v1/metrics",
+                insecure=oltp_insecure,
+            )
+            if oltp_http
+            else OTLPMetricExporter(
+                endpoint=f"{oltp_url}",
+                insecure=oltp_insecure,
+            )
+        ),
+    )
+    meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
+    metrics.set_meter_provider(meter_provider)
+
 
 schemas = SchemaGenerator(
     {"openapi": "3.0.0", "info": {"title": "HORAO API", "version": "1.0"}}
@@ -53,9 +122,11 @@ async def docs(request):
 
 
 def init_api() -> Starlette:
+    logger = logging.getLogger("horao.init")
+    logger.debug("initializing horao")
     cors = os.getenv("CORS", "*")
     if cors == "*":
-        logging.warning("CORS is set to *")
+        logger.warning("CORS is set to *")
     routes = [
         Route("/ping", endpoint=horao.api.alive_controller.is_alive, methods=["GET"]),
         Route(
@@ -75,6 +146,13 @@ def init_api() -> Starlette:
         middleware.append(
             Middleware(AuthenticationMiddleware, backend=BasicAuthBackend())
         )
-    return Starlette(
-        routes=routes, middleware=middleware, debug=bool(os.getenv("DEBUG", False))
+    if os.getenv("TELEMETRY", "ON") == "OFF":
+        logger.warning("Telemetry is turned off")
+        return Starlette(
+            routes=routes, middleware=middleware, debug=bool(os.getenv("DEBUG", False))
+        )
+    return StarletteInstrumentor.instrument_app(
+        Starlette(
+            routes=routes, middleware=middleware, debug=bool(os.getenv("DEBUG", False))
+        )
     )
