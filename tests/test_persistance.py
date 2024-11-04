@@ -1,12 +1,38 @@
+import json
+
 import pytest
 
 from horao.conceptual.crdt import LastWriterWinsMap, LastWriterWinsRegister
+from horao.conceptual.osi_layers import LinkLayer
 from horao.conceptual.support import LogicalClock
 from horao.logical.infrastructure import LogicalInfrastructure
+from horao.persistance import HoraoDecoder, HoraoEncoder
 from horao.persistance.store import Store
+from horao.physical.component import CPU, RAM
+from horao.physical.computer import Server
+from horao.physical.hardware import HardwareList
+from horao.physical.network import Switch, Port, SwitchType, NIC
+from horao.physical.status import DeviceStatus
 from tests.logical.test_scheduler import initialize_logical_infrastructure
 
 pytest_plugins = ("pytest_asyncio",)
+
+
+def test_direct_encode_decode_lists():
+    l = HardwareList[CPU]()
+    l.append(
+        CPU(
+            serial_number="123",
+            model="bar",
+            number=1,
+            clock_speed=1.0,
+            cores=1,
+            features=None,
+        )
+    )
+    ser = json.dumps(l, cls=HoraoEncoder)
+    deser = json.loads(ser, cls=HoraoDecoder)
+    assert list(l) == deser
 
 
 @pytest.mark.asyncio
@@ -51,6 +77,109 @@ async def test_storing_loading_last_writer_wins_map():
     await store.save("lww_map", lww_map)
     loaded_lww_map = await store.load("lww_map")
     assert lww_map == loaded_lww_map
+
+
+@pytest.mark.asyncio
+async def test_storing_loading_switch():
+    switch = Switch(
+        serial_number="123",
+        name="foo",
+        model="bar",
+        number=1,
+        layer=LinkLayer.Layer2,
+        switch_type=SwitchType.Access,
+        status=DeviceStatus.Up,
+        managed=False,
+        lan_ports=[
+            Port(
+                serial_number="123",
+                model="bar",
+                number=1,
+                mac="00:00:00:00:00:00",
+                status=DeviceStatus.Up,
+                connected=False,
+                speed_gb=1,
+            )
+        ],
+        uplink_ports=[],
+    )
+    store = Store(None)
+    await store.save("switch", switch)
+    loaded_switch = await store.load("switch")
+    assert switch == loaded_switch
+
+
+@pytest.mark.asyncio
+async def test_storing_loading_server():
+    server = Server(
+        serial_number="123",
+        name="foo",
+        model="bar",
+        number=1,
+        cpus=[
+            CPU(
+                serial_number="123",
+                model="bar",
+                number=1,
+                clock_speed=1.0,
+                cores=1,
+                features=None,
+            )
+        ],
+        rams=[
+            RAM(
+                serial_number="123",
+                model="bar",
+                number=1,
+                size_gb=1,
+                speed_mhz=1,
+            )
+        ],
+        nics=[
+            NIC(
+                serial_number="123",
+                model="bar",
+                number=1,
+                ports=[
+                    Port(
+                        serial_number="123",
+                        model="bar",
+                        number=1,
+                        mac="00:00:00:00:00:00",
+                        status=DeviceStatus.Up,
+                        connected=False,
+                        speed_gb=1,
+                    )
+                ],
+            )
+        ],
+        disks=[],
+        accelerators=[],
+        status=DeviceStatus.Up,
+    )
+    store = Store(None)
+    await store.save("server", server)
+    loaded_server = await store.load("server")
+    assert server == loaded_server
+
+
+@pytest.mark.asyncio
+async def test_storing_loading_list():
+    l = HardwareList[CPU]()
+    l.append(
+        CPU(
+            serial_number="123",
+            model="bar",
+            number=1,
+            clock_speed=1.0,
+            cores=1,
+            features=None,
+        )
+    )
+    store = Store(None)
+    await store.save("list", l)
+    loaded_list = await store.load("list")
+    assert list(l) == loaded_list
 
 
 @pytest.mark.asyncio

@@ -4,7 +4,6 @@ import json
 from datetime import date, datetime
 from json import JSONDecodeError
 
-from networkx.algorithms.structuralholes import constraint
 from networkx.convert import from_dict_of_dicts, to_dict_of_dicts  # type: ignore
 
 from horao.conceptual.claim import Reservation
@@ -12,6 +11,7 @@ from horao.conceptual.crdt import (
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
+    CRDTList,
 )
 from horao.conceptual.osi_layers import LinkLayer
 from horao.conceptual.support import LogicalClock, Update, UpdateType
@@ -21,7 +21,7 @@ from horao.logical.infrastructure import LogicalInfrastructure
 from horao.logical.resource import Compute, Storage
 from horao.physical.component import CPU, RAM, Accelerator, Disk
 from horao.physical.composite import Blade, Cabinet, Chassis, Node
-from horao.physical.computer import Module, Server
+from horao.physical.computer import Module, Server, ComputerList
 from horao.physical.hardware import HardwareList
 from horao.physical.network import (
     NIC,
@@ -32,6 +32,7 @@ from horao.physical.network import (
     RouterType,
     Switch,
     SwitchType,
+    NetworkList,
 )
 from horao.physical.status import DeviceStatus
 from horao.physical.storage import StorageType
@@ -104,16 +105,12 @@ class HoraoEncoder(json.JSONEncoder):
                     if obj.registers
                     else None
                 ),
+                "clock": json.dumps(obj.clock, cls=HoraoEncoder) if obj.clock else None,
                 "listeners": (
                     json.dumps(obj.listeners, cls=HoraoEncoder)
                     if obj.listeners
                     else None
                 ),
-            }
-        if isinstance(obj, HardwareList):
-            return {
-                "type": "HardwareList",
-                "hardware": json.dumps(obj.hardware, cls=HoraoEncoder),
             }
         if isinstance(obj, Port):
             return {
@@ -480,14 +477,15 @@ class HoraoDecoder(json.JSONDecoder):
                     if obj["registers"]
                     else None
                 ),
+                clock=(
+                    json.loads(obj["clock"], cls=HoraoDecoder) if obj["clock"] else None
+                ),
                 listeners=(
                     json.loads(obj["listeners"], cls=HoraoDecoder)
                     if obj["listeners"]
                     else None
                 ),
             )
-        if "type" in obj and obj["type"] == "HardwareList":
-            return HardwareList(items=json.loads(obj["hardware"], cls=HoraoDecoder))
         if "type" in obj and obj["type"] == "Port":
             return Port(
                 serial_number=obj["serial_number"],
@@ -703,21 +701,21 @@ class HoraoDecoder(json.JSONDecoder):
             tenants = json.loads(obj["tenants"], cls=HoraoDecoder)
             data_centers = json.loads(obj["data_centers"], cls=HoraoDecoder)
             infrastructure = {}
-            for k, v in json.loads(obj["infrastructure"], cls=HoraoDecoder):
+            for k, v in json.loads(obj["infrastructure"], cls=HoraoDecoder).items():
                 data_centre = next(
                     iter([dc for dc in data_centers if dc.name == k]), None
                 )
-                if not data_centre:
+                if data_centre is None:
                     raise JSONDecodeError(f"DataCenter {k} not found", obj, 0)
                 infrastructure[data_centre] = v
             constraints = {}
-            for k, v in json.loads(obj["constraints"], cls=HoraoDecoder):
+            for k, v in json.loads(obj["constraints"], cls=HoraoDecoder).items():
                 tenant = next(iter([t for t in tenants if t.name == k]), None)
                 if not tenant:
                     raise JSONDecodeError(f"Tenant {k} not found", obj, 0)
                 constraints[tenant] = v
             claims = {}
-            for k, v in json.loads(obj["claims"], cls=HoraoDecoder):
+            for k, v in json.loads(obj["claims"], cls=HoraoDecoder).items():
                 tenant = next(iter([t for t in tenants if t.name == k]), None)
                 if not tenant:
                     raise JSONDecodeError(f"Tenant {k} not found", obj, 0)

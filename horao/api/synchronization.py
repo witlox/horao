@@ -33,7 +33,7 @@ async def synchronize(request: Request) -> JSONResponse:
     """
     logging.debug(f"Calling Synchronize ({request})")
     try:
-        data = await request.body()
+        data = await request.json()
         logical_infrastructure = json.loads(data, cls=HoraoDecoder)
     except Exception as e:
         logging.error(f"Error parsing request: {e}")
@@ -45,14 +45,14 @@ async def synchronize(request: Request) -> JSONResponse:
     try:
         session = init_session()
         for k, v in logical_infrastructure.infrastructure.items():
-            local_dc = session.load(k.identity)
+            local_dc = await session.load(k.name)
             if not local_dc:
-                session.save(k.identity, k)
+                await session.save(k.name, k)
             else:
                 local_dc.merge(k)
-            local_dc_content = session.load(f"{k.identity}.content")
+            local_dc_content = await session.load(f"{k.name}.content")
             if not local_dc_content:
-                session.save(f"{k.identity}.content", v)
+                await session.save(f"{k.name}.content", v)
             else:
                 local_dc_content.merge(v)
     except Exception as e:

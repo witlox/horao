@@ -14,6 +14,7 @@ from typing import (
     Set,
     Tuple,
     TypeVar,
+    Any,
 )
 
 from horao.conceptual.decorators import instrument_class_function
@@ -472,6 +473,7 @@ class LastWriterWinsMap(CRDT):
         self,
         names: Optional[ObservedRemovedSet] = None,
         registers: Optional[Dict[Hashable, LastWriterWinsRegister]] = None,
+        clock: Optional[LogicalClock] = None,
         listeners: Optional[List[Callable]] = None,
     ) -> None:
         """
@@ -479,6 +481,7 @@ class LastWriterWinsMap(CRDT):
         names to LastWriterWinsRegisters, and a shared clock.
         :param names: ObservedRemovedSet
         :param registers: dict of names (keys) to LastWriterWinsRegisters (values)
+        :param clock: LogicalClock
         :param listeners: list[Callable]
         :raises TypeError: registers not filled with correct values (and/or types)
         """
@@ -487,7 +490,7 @@ class LastWriterWinsMap(CRDT):
 
         names = ObservedRemovedSet() if names is None else names
         registers = {} if registers is None else registers
-        clock = LogicalClock()
+        clock = LogicalClock() if clock is None else clock
 
         names.clock = clock
 
@@ -498,12 +501,6 @@ class LastWriterWinsMap(CRDT):
         self.registers = registers
         self.clock = clock
         self.listeners = listeners
-
-    def __getstate__(self):
-        return self.__dict__.copy()
-
-    def __setstate__(self, state):
-        self.__dict__ = state
 
     def read(self) -> dict:
         """
@@ -744,7 +741,7 @@ class LastWriterWinsMap(CRDT):
 T = TypeVar("T", bound=Hashable)
 
 
-class CRDTList(Generic[T]):
+class CRDTList(List[T]):
     """CRDTList behaves as a list of instances T that can be updated concurrently."""
 
     def __init__(
@@ -757,8 +754,9 @@ class CRDTList(Generic[T]):
         :param content: list of T instances
         :param items: LastWriterWinsMap of T items
         """
+        super().__init__()
         self.log = logging.getLogger(__name__)
-        self.hardware = LastWriterWinsMap() if not items else items
+        self.items = LastWriterWinsMap() if not items else items
         if content:
             self.extend(content)
         self.iterator = 0
@@ -770,42 +768,30 @@ class CRDTList(Generic[T]):
         :param item: instance of Hardware
         :return: inserted item
         """
-        self.hardware.set(len(self), item, hash(item))
+        self.items.set(len(self), item, hash(item))
         return item
-
-    def clear(self) -> None:
-        """
-        Clear the list, not the history
-        :return: None
-        """
-        # todo check history is consistent
-        self.iterator = 0
-        self.hardware = LastWriterWinsMap()
 
     def copy(self) -> CRDTList[T]:
         results = CRDTList[T]()
-        for _, item in self.hardware.read().items():
+        for _, item in self.items.read().items():
             results.append(item.copy())
         return results
 
-    def count(self):
-        return len(self)
-
-    def extend(self, other: Iterable[T]) -> CRDTList[T]:
+    def extend(self, other: Iterable[T]) -> None:
         for item in other:
-            if item not in self.hardware.read():
-                self.hardware.set(len(self), item, hash(item))
-        return self
+            if item not in self.items.read():
+                self.items.set(len(self), item, hash(item))
 
-    def index(self, item: T) -> int:
+    def index(self, item: T, **kwargs: Any) -> int:
         """
         Return the index of the hardware instance
         :param item: instance to search for
+        :param kwargs: additional arguments
         :return: int
         :raises ValueError: item not found
         """
         result = next(
-            iter([i for i, h in self.hardware.read() if h == item]),
+            iter([i for i, h in self.items.read() if h == item]),
             None,
         )
         if result is None:
@@ -814,15 +800,15 @@ class CRDTList(Generic[T]):
         return result
 
     def insert(self, index: int, item: T) -> None:
-        self.hardware.set(index, item, hash(item))
+        self.items.set(index, item, hash(item))
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
     def pop(self, index: int, default=None) -> Optional[T]:
         if index >= len(self):
             self.log.debug(f"Index {index} out of bounds, returning default.")
             return default
-        item = self.hardware.read()[index]
-        self.hardware.unset(item, hash(item))
+        item = self.items.read()[index]
+        self.items.unset(item, hash(item))
         return item
 
     @instrument_class_function(name="remove", level=logging.DEBUG)
@@ -834,61 +820,45 @@ class CRDTList(Generic[T]):
         :raises ValueError: item not found
         """
         local_item = next(
-            iter([h for _, h in self.hardware.read() if h == item]),
+            iter([h for _, h in self.items.read() if h == item]),
             None,
         )
         if not local_item:
             self.log.debug(f"{item} not found.")
             raise ValueError(f"{item} not found.")
-        self.hardware.unset(local_item, hash(item))
-
-    def reverse(self) -> None:
-        """
-        cannot reverse a list inplace in a CRDT
-        :return: None
-        :raises: NotImplementedError
-        """
-        raise NotImplementedError("Cannot reverse a list inplace in a CRDT")
-
-    def sort(self, item=None, reverse: bool = False) -> None:
-        """
-        cannot sort a list inplace in a CRDT
-        :return: None
-        :raises: NotImplementedError
-        """
-        raise NotImplementedError("Cannot sort a list inplace in a CRDT")
+        self.items.unset(local_item, hash(item))
 
     def __len__(self) -> int:
-        return len(self.hardware.read())
+        return len(self.items.read())
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, CRDTList):
             return False
-        return self.hardware.read() == other.hardware.read()
+        return self.items.read() == other.items.read()
 
     def __contains__(self, item: T) -> bool:
-        return item in self.hardware.read()
+        return item in self.items.read()
 
     def __delitem__(self, item: T) -> None:
-        if item not in self.hardware.read():
+        if item not in self.items.read():
             raise KeyError(f"{item} not found.")
         self.remove(item)
 
     def __getitem__(self, index: int) -> T:
-        return self.hardware.read()[index]
+        return self.items.read()[index]
 
     def __setitem__(self, index: int, value: T) -> None:
-        self.hardware.set(index, value, hash(value))
+        self.items.set(index, value, hash(value))
 
     def __iter__(self) -> Iterable[T]:
-        for _, item in self.hardware.read().items():
+        for _, item in self.items.read().items():
             yield item
 
     def __next__(self) -> T:
         if self.iterator >= len(self):
             self.iterator = 0
             raise StopIteration
-        item = self.hardware.read()[self.iterator]
+        item = self.items.read()[self.iterator]
         self.iterator += 1
         return item
 
@@ -901,13 +871,13 @@ class CRDTList(Generic[T]):
         return self
 
     def __repr__(self) -> str:
-        return f"HardwareList({self.hardware.read()})"
+        return f"HardwareList({self.items.read()})"
 
     def __reversed__(self) -> CRDTList[T]:
-        return self.hardware.read()[::-1]
+        return self.items.read()[::-1]
 
     def __sizeof__(self) -> int:
         return self.count()
 
     def __hash__(self):
-        return hash(self.hardware)
+        return hash(self.items)

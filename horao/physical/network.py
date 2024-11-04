@@ -14,8 +14,26 @@ import networkx as nx  # type: ignore
 
 from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
 from horao.conceptual.osi_layers import LinkLayer
-from horao.physical.hardware import Hardware
+from horao.physical.hardware import Hardware, HardwareList
 from horao.physical.status import DeviceStatus
+
+
+class Port(Hardware):
+    def __init__(
+        self,
+        serial_number: str,
+        model: str,
+        number: int,
+        mac: str,
+        status: DeviceStatus,
+        connected: bool,
+        speed_gb: int,
+    ):
+        super().__init__(serial_number, model, number)
+        self.mac = mac
+        self.status = status
+        self.connected = connected
+        self.speed_gb = speed_gb
 
 
 class NetworkTopology(Enum):
@@ -95,14 +113,22 @@ class SwitchType(Enum):
 
 
 class NetworkDevice(Hardware):
-    def __init__(self, serial_number, model, number, ports: List[Port]):
+    def __init__(
+        self, serial_number, model, number, ports: List[Port] | HardwareList[Port]
+    ):
         super().__init__(serial_number, model, number)
-        self.ports = ports
+        self.ports = (
+            ports if isinstance(ports, HardwareList) else HardwareList[Port](ports)
+        )
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, NetworkDevice):
             return False
-        return self.serial_number == other.serial_number and self.model == other.model
+        return (
+            self.serial_number == other.serial_number
+            and self.model == other.model
+            and len(self.ports) == len(other.ports)
+        )
 
     def __gt__(self, other) -> bool:
         return self.number > other.number
@@ -115,7 +141,13 @@ class NetworkDevice(Hardware):
 
 
 class NIC(NetworkDevice):
-    def __init__(self, serial_number: str, model: str, number: int, ports: List[Port]):
+    def __init__(
+        self,
+        serial_number: str,
+        model: str,
+        number: int,
+        ports: List[Port] | HardwareList[Port],
+    ):
         super().__init__(serial_number, model, number, ports)
 
 
@@ -127,14 +159,31 @@ class Firewall(NetworkDevice):
         model: str,
         number: int,
         status: DeviceStatus,
-        lan_ports: List[Port],
-        wan_ports: Optional[List[Port]],
+        lan_ports: List[Port] | HardwareList[Port],
+        wan_ports: Optional[List[Port]] | Optional[HardwareList[Port]],
     ):
 
         super().__init__(serial_number, model, number, lan_ports)
         self.name = name
         self.status = status
-        self.wan_ports = wan_ports
+        self.wan_ports = (
+            wan_ports
+            if isinstance(wan_ports, HardwareList)
+            else HardwareList[Port](wan_ports)
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, Firewall):
+            return False
+        return (
+            self.serial_number == other.serial_number
+            and self.model == other.model
+            and len(self.ports) == len(other.ports)
+            and len(self.wan_ports) == len(other.wan_ports)
+        )
+
+    def __hash__(self):
+        return super().__hash__()
 
 
 class Router(NetworkDevice):
@@ -146,14 +195,32 @@ class Router(NetworkDevice):
         number: int,
         router_type: RouterType,
         status: DeviceStatus,
-        lan_ports: List[Port],
-        wan_ports: Optional[List[Port]],
+        lan_ports: List[Port] | HardwareList[Port],
+        wan_ports: Optional[List[Port]] | Optional[HardwareList[Port]],
     ):
         super().__init__(serial_number, model, number, lan_ports)
         self.name = name
         self.router_type = router_type
         self.status = status
-        self.wan_ports = wan_ports
+        self.wan_ports = (
+            wan_ports
+            if isinstance(wan_ports, HardwareList)
+            else HardwareList[Port](wan_ports)
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, Router):
+            return
+        return (
+            self.serial_number == other.serial_number
+            and self.model == other.model
+            and self.router_type == other.router_type
+            and len(self.ports) == len(other.ports)
+            and len(self.wan_ports) == len(other.wan_ports)
+        )
+
+    def __hash__(self):
+        return hash((self.serial_number, self.model, self.router_type))
 
 
 class Switch(NetworkDevice):
@@ -167,8 +234,8 @@ class Switch(NetworkDevice):
         switch_type: SwitchType,
         status: DeviceStatus,
         managed: bool,
-        lan_ports: List[Port],
-        uplink_ports: Optional[List[Port]],
+        lan_ports: List[Port] | HardwareList[Port],
+        uplink_ports: Optional[List[Port]] | Optional[HardwareList[Port]],
     ):
         super().__init__(serial_number, model, number, lan_ports)
         self.name = name
@@ -176,7 +243,26 @@ class Switch(NetworkDevice):
         self.switch_type = switch_type
         self.status = status
         self.managed = managed
-        self.uplink_ports = uplink_ports
+        self.uplink_ports = (
+            uplink_ports
+            if isinstance(uplink_ports, HardwareList)
+            else HardwareList[Port](uplink_ports)
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, Switch):
+            return False
+        return (
+            self.serial_number == other.serial_number
+            and self.model == other.model
+            and self.layer == other.layer
+            and self.switch_type == other.switch_type
+            and len(self.ports) == len(other.ports)
+            and len(self.uplink_ports) == len(other.uplink_ports)
+        )
+
+    def __hash__(self):
+        return hash((self.serial_number, self.model, self.layer, self.switch_type))
 
 
 T = TypeVar("T", bound=NetworkDevice)
@@ -189,21 +275,3 @@ class NetworkList(CRDTList[T]):
         items: Optional[LastWriterWinsMap] = None,
     ):
         super().__init__(devices, items)
-
-
-class Port(Hardware):
-    def __init__(
-        self,
-        serial_number: str,
-        model: str,
-        number: int,
-        mac: str,
-        status: DeviceStatus,
-        connected: bool,
-        speed_gb: int,
-    ):
-        super().__init__(serial_number, model, number)
-        self.mac = mac
-        self.status = status
-        self.connected = connected
-        self.speed_gb = speed_gb
