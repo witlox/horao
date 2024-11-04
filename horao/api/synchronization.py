@@ -2,6 +2,7 @@
 """All calls needed for synchronizing HORAO instances."""
 import json
 import logging
+import os
 
 from starlette.authentication import requires
 from starlette.requests import Request
@@ -32,25 +33,33 @@ async def synchronize(request: Request) -> JSONResponse:
     """
     logging.debug(f"Calling Synchronize ({request})")
     try:
-        data = await request.json()
+        data = await request.body()
+        logical_infrastructure = json.loads(data, cls=HoraoDecoder)
     except Exception as e:
         logging.error(f"Error parsing request: {e}")
+        if os.getenv("DEBUG", "False") == "True":
+            return JSONResponse(
+                status_code=400, content={"error": f"Error parsing request {str(e)}"}
+            )
         return JSONResponse(status_code=400, content={"error": "Error parsing request"})
     try:
-        logical_infrastructure = json.loads(data, cls=HoraoDecoder)
         session = init_session()
         for k, v in logical_infrastructure.infrastructure.items():
-            local_dc = session.load(k.id)
+            local_dc = session.load(k.identity)
             if not local_dc:
-                session.save(k.id, k)
+                session.save(k.identity, k)
             else:
                 local_dc.merge(k)
-            local_dc_content = session.load(f"{k.id}.content")
+            local_dc_content = session.load(f"{k.identity}.content")
             if not local_dc_content:
-                session.save(f"{k.id}.content", v)
+                session.save(f"{k.identity}.content", v)
             else:
                 local_dc_content.merge(v)
     except Exception as e:
         logging.error(f"Error synchronizing: {e}")
-        return JSONResponse(status_code=500, content={"error": "Error synchronizing"})
+        if os.getenv("DEBUG", "False") == "True":
+            return JSONResponse(
+                status_code=500, content={"error": f"Error synchronizing {str(e)}"}
+            )
+        return JSONResponse(status_code=500, content={"error": f"Error synchronizing"})
     return JSONResponse(status_code=200, content={"status": "is alive"})

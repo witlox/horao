@@ -453,6 +453,17 @@ class LastWriterWinsRegister(CRDT):
         for listener in self.listeners:
             listener(state_update)
 
+    def __eq__(self, other):
+        if not isinstance(other, LastWriterWinsRegister):
+            return False
+        return (
+            self.name == other.name
+            and self.clock == other.clock
+            and self.value == other.value
+            and self.last_update == other.last_update
+            and self.last_writer == other.last_writer
+        )
+
 
 class LastWriterWinsMap(CRDT):
     """Last Writer Wins Map CRDT."""

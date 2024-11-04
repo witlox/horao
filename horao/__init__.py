@@ -19,6 +19,7 @@ from opentelemetry.sdk.metrics import MeterProvider  # type: ignore
 from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,  # type: ignore
 )
+from starlette.authentication import AuthenticationBackend
 
 if os.getenv("OLTP_HTTP", "False") == "False":
     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
@@ -45,8 +46,7 @@ from starlette.schemas import SchemaGenerator  # type: ignore
 import horao.api
 import horao.api.synchronization
 import horao.auth
-from horao.auth.basic import BasicAuthBackend
-from horao.auth.peer import PeerAuthBackend
+from horao.auth.multi import MultiAuthBackend
 
 LoggingInstrumentor().instrument(set_logging_format=True)
 
@@ -121,9 +121,10 @@ async def docs(request):
     return HTMLResponse(html)
 
 
-def init() -> Starlette:
+def init(authorization: AuthenticationBackend = None) -> Starlette:
     """
     Initialize the API
+    authorization: optional authorization backend to overwrite default behavior (useful for testing)
     :return: app instance
     """
     if os.getenv("DEBUG", "False") == "True":
@@ -148,11 +149,13 @@ def init() -> Starlette:
         routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
     middleware = [
         Middleware(CORSMiddleware, allow_origins=[cors]),
-        Middleware(AuthenticationMiddleware, backend=PeerAuthBackend()),
     ]
-    if os.getenv("AUTH", "basic") == "basic":
+    if authorization:
+        logger.warning(f"Using custom authorization backend: {type(authorization)}")
+        middleware.append(Middleware(AuthenticationMiddleware, backend=authorization))
+    else:
         middleware.append(
-            Middleware(AuthenticationMiddleware, backend=BasicAuthBackend())
+            Middleware(AuthenticationMiddleware, backend=MultiAuthBackend())
         )
     app = Starlette(
         routes=routes,

@@ -6,4 +6,4 @@ only contains authorization. The RBAC module is used to define the roles and per
 various implementations that can be used, but some are only meant for development purpose.
 """
 from horao.auth.basic import BasicAuthBackend
-from horao.auth.peer import PeerAuthBackend, Peer
+from horao.auth.multi import MultiAuthBackend, Peer

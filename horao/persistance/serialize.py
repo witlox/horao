@@ -2,7 +2,9 @@
 """Serialize and Deserialize Horao objects to JSON"""
 import json
 from datetime import date, datetime
+from json import JSONDecodeError
 
+from networkx.algorithms.structuralholes import constraint
 from networkx.convert import from_dict_of_dicts, to_dict_of_dicts  # type: ignore
 
 from horao.conceptual.claim import Reservation
@@ -94,23 +96,20 @@ class HoraoEncoder(json.JSONEncoder):
                 ),
             }
         if isinstance(obj, LastWriterWinsMap):
-            result = {
+            return {
                 "type": "LastWriterWinsMap",
                 "names": json.dumps(obj.names, cls=HoraoEncoder) if obj.names else None,
+                "registers": (
+                    json.dumps(obj.registers, cls=HoraoEncoder)
+                    if obj.registers
+                    else None
+                ),
                 "listeners": (
                     json.dumps(obj.listeners, cls=HoraoEncoder)
                     if obj.listeners
                     else None
                 ),
             }
-            registers = {}
-            if obj.registers:
-                for k, v in obj.registers.items():
-                    registers[json.dumps(k, cls=HoraoEncoder)] = json.dumps(
-                        v, cls=HoraoEncoder
-                    )
-            result["registers"] = registers
-            return result
         if isinstance(obj, HardwareList):
             return {
                 "type": "HardwareList",
@@ -333,24 +332,19 @@ class HoraoEncoder(json.JSONEncoder):
                 "hsn": obj.hsn if obj.hsn else False,
             }
         if isinstance(obj, LogicalInfrastructure):
+            tenants = list(set(list(obj.constraints.keys()) + list(obj.claims.keys())))
+            data_centers = list(obj.infrastructure.keys())
+            infrastructure = {k.name: v for k, v in obj.infrastructure.items()}
+            claims = {k.name: v for k, v in obj.claims.items()}
+            constraints = {k.name: v for k, v in obj.constraints.items()}
             result = {
                 "type": "LogicalInfrastructure",
-                "infrastructure": {},
-                "constraints": {},
-                "claims": {},
+                "tenants": json.dumps(tenants, cls=HoraoEncoder),
+                "data_centers": json.dumps(data_centers, cls=HoraoEncoder),
+                "infrastructure": json.dumps(infrastructure, cls=HoraoEncoder),
+                "constraints": json.dumps(constraints, cls=HoraoEncoder),
+                "claims": json.dumps(claims, cls=HoraoEncoder),
             }
-            for k, v in obj.infrastructure.items():
-                result["infrastructure"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
-                    v, cls=HoraoEncoder
-                )
-            for k, v in obj.constraints.items():
-                result["constraints"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
-                    v, cls=HoraoEncoder
-                )
-            for k, v in obj.claims.items():
-                result["claims"][json.dumps(k, cls=HoraoEncoder)] = json.dumps(
-                    v, cls=HoraoEncoder
-                )
             return result
         if isinstance(obj, Storage):
             return {
@@ -390,7 +384,6 @@ class HoraoEncoder(json.JSONEncoder):
                 "name": obj.name,
                 "start": obj.start,
                 "end": obj.end,
-                "end_user": obj.end_user,
                 "resources": json.dumps(obj.resources, cls=HoraoEncoder),
                 "maximal_resources": (
                     json.dumps(obj.maximal_resources, cls=HoraoEncoder)
@@ -478,21 +471,20 @@ class HoraoDecoder(json.JSONDecoder):
                 ),
             )
         if "type" in obj and obj["type"] == "LastWriterWinsMap":
-            registers = {}
-            for k, v in obj["registers"].items():
-                registers[json.loads(k, cls=HoraoDecoder)] = json.loads(
-                    v, cls=HoraoDecoder
-                )
             return LastWriterWinsMap(
                 names=(
                     json.loads(obj["names"], cls=HoraoDecoder) if obj["names"] else None
+                ),
+                registers=(
+                    json.loads(obj["registers"], cls=HoraoDecoder)
+                    if obj["registers"]
+                    else None
                 ),
                 listeners=(
                     json.loads(obj["listeners"], cls=HoraoDecoder)
                     if obj["listeners"]
                     else None
                 ),
-                registers=registers,
             )
         if "type" in obj and obj["type"] == "HardwareList":
             return HardwareList(items=json.loads(obj["hardware"], cls=HoraoDecoder))
@@ -708,21 +700,28 @@ class HoraoDecoder(json.JSONDecoder):
             dcn.links_from_graph(from_dict_of_dicts(json.loads(obj["graph"])))
             return dcn
         if "type" in obj and obj["type"] == "LogicalInfrastructure":
+            tenants = json.loads(obj["tenants"], cls=HoraoDecoder)
+            data_centers = json.loads(obj["data_centers"], cls=HoraoDecoder)
             infrastructure = {}
-            for k, v in obj["infrastructure"].items():
-                infrastructure[json.loads(k, cls=HoraoDecoder)] = json.loads(
-                    v, cls=HoraoDecoder
+            for k, v in json.loads(obj["infrastructure"], cls=HoraoDecoder):
+                data_centre = next(
+                    iter([dc for dc in data_centers if dc.name == k]), None
                 )
+                if not data_centre:
+                    raise JSONDecodeError(f"DataCenter {k} not found", obj, 0)
+                infrastructure[data_centre] = v
             constraints = {}
-            for k, v in obj["constraints"].items():
-                constraints[json.loads(k, cls=HoraoDecoder)] = json.loads(
-                    v, cls=HoraoDecoder
-                )
+            for k, v in json.loads(obj["constraints"], cls=HoraoDecoder):
+                tenant = next(iter([t for t in tenants if t.name == k]), None)
+                if not tenant:
+                    raise JSONDecodeError(f"Tenant {k} not found", obj, 0)
+                constraints[tenant] = v
             claims = {}
-            for k, v in obj["claims"].items():
-                claims[json.loads(k, cls=HoraoDecoder)] = json.loads(
-                    v, cls=HoraoDecoder
-                )
+            for k, v in json.loads(obj["claims"], cls=HoraoDecoder):
+                tenant = next(iter([t for t in tenants if t.name == k]), None)
+                if not tenant:
+                    raise JSONDecodeError(f"Tenant {k} not found", obj, 0)
+                claims[tenant] = v
             return LogicalInfrastructure(
                 infrastructure=infrastructure,
                 constraints=constraints,
@@ -759,7 +758,6 @@ class HoraoDecoder(json.JSONDecoder):
                 name=obj["name"],
                 start=obj["start"],
                 end=obj["end"],
-                end_user=obj["end_user"],
                 resources=json.loads(obj["resources"], cls=HoraoDecoder),
                 maximal_resources=(
                     json.loads(obj["maximal_resources"], cls=HoraoDecoder)
