@@ -150,6 +150,9 @@ class NIC(NetworkDevice):
     ):
         super().__init__(serial_number, model, number, ports)
 
+    def __iter__(self):
+        return iter(self.ports)
+
 
 class Firewall(NetworkDevice):
     def __init__(

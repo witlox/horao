@@ -6,12 +6,13 @@ from json import JSONDecodeError
 
 from networkx.convert import from_dict_of_dicts, to_dict_of_dicts  # type: ignore
 
+from horao.auth.roles import TenantController
 from horao.conceptual.claim import Reservation
 from horao.conceptual.crdt import (
+    CRDTList,
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
-    CRDTList,
 )
 from horao.conceptual.osi_layers import LinkLayer
 from horao.conceptual.support import LogicalClock, Update, UpdateType
@@ -21,7 +22,7 @@ from horao.logical.infrastructure import LogicalInfrastructure
 from horao.logical.resource import Compute, Storage
 from horao.physical.component import CPU, RAM, Accelerator, Disk
 from horao.physical.composite import Blade, Cabinet, Chassis, Node
-from horao.physical.computer import Module, Server, ComputerList
+from horao.physical.computer import ComputerList, Module, Server
 from horao.physical.hardware import HardwareList
 from horao.physical.network import (
     NIC,
@@ -32,11 +33,9 @@ from horao.physical.network import (
     RouterType,
     Switch,
     SwitchType,
-    NetworkList,
 )
 from horao.physical.status import DeviceStatus
 from horao.physical.storage import StorageType
-from horao.rbac import TenantOwner
 
 
 class HoraoEncoder(json.JSONEncoder):
@@ -312,9 +311,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "name": obj.name,
                 "number": obj.number,
             }
-            rows = []
-            for row in obj.rows.read():
-                rows = json.dumps(row, cls=HoraoEncoder)
+            rows = json.dumps(obj.rows, cls=HoraoEncoder)
             result["rows"] = rows if rows else None
             return result
         if isinstance(obj, DataCenterNetwork):
@@ -363,9 +360,9 @@ class HoraoEncoder(json.JSONEncoder):
                 "compute_limits": json.dumps(obj.compute_limits, cls=HoraoEncoder),
                 "storage_limits": json.dumps(obj.storage_limits, cls=HoraoEncoder),
             }
-        if isinstance(obj, TenantOwner):
+        if isinstance(obj, TenantController):
             return {
-                "type": "TenantOwner",
+                "type": "TenantController",
                 "name": obj.name,
             }
         if isinstance(obj, Tenant):
@@ -743,8 +740,11 @@ class HoraoDecoder(json.JSONDecoder):
                 compute_limits=json.loads(obj["compute_limits"], cls=HoraoDecoder),
                 storage_limits=json.loads(obj["storage_limits"], cls=HoraoDecoder),
             )
-        if "type" in obj and obj["type"] == "TenantOwner":
-            return TenantOwner()
+        if "type" in obj and obj["type"] == "TenantController":
+            return TenantController(
+                name=obj["name"],
+                tenants=json.load(obj["tenants"]) if obj["tenants"] else None,
+            )
         if "type" in obj and obj["type"] == "Tenant":
             return Tenant(
                 name=obj["name"],

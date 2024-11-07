@@ -6,10 +6,9 @@ import jwt
 from starlette.testclient import TestClient
 
 from horao import init
-from horao.auth import BasicAuthBackend
-from horao.auth.basic import basic_auth
 from horao.logical.infrastructure import LogicalInfrastructure
 from horao.persistance import HoraoEncoder
+from tests.basic_auth import BasicAuthBackend, basic_auth
 from tests.helpers import initialize_logical_infrastructure
 
 

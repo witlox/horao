@@ -31,23 +31,23 @@ class Computer(ABC):
         self.number = number
         self.cpus = HardwareList[CPU](
             hardware=cpus if isinstance(cpus, list) else None,
-            items=cpus if isinstance(cpus, HardwareList) else None,
+            items=cpus if isinstance(cpus, HardwareList) else None,  # type: ignore
         )
         self.rams = HardwareList[RAM](
             hardware=rams if isinstance(rams, list) else None,
-            items=rams if isinstance(rams, HardwareList) else None,
+            items=rams if isinstance(rams, HardwareList) else None,  # type: ignore
         )
         self.nics = HardwareList[NIC](
             hardware=nics if isinstance(nics, list) else None,
-            items=nics if isinstance(nics, HardwareList) else None,
+            items=nics if isinstance(nics, HardwareList) else None,  # type: ignore
         )
         self.disks = HardwareList[Disk](
             hardware=disks if isinstance(disks, list) else None,
-            items=disks if isinstance(disks, HardwareList) else None,
+            items=disks if isinstance(disks, HardwareList) else None,  # type: ignore
         )
         self.accelerators = HardwareList[Accelerator](
             hardware=accelerators if isinstance(accelerators, list) else None,
-            items=accelerators if isinstance(accelerators, HardwareList) else None,
+            items=accelerators if isinstance(accelerators, HardwareList) else None,  # type: ignore
         )
 
     def __copy__(self):

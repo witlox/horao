@@ -8,10 +8,13 @@ from starlette.authentication import requires
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from horao.auth.permissions import Namespace, Permission
+from horao.auth.validate import permission_required
 from horao.persistance import HoraoDecoder, init_session
 
 
-@requires("authenticated_peer")
+@requires("authenticated")
+@permission_required(Namespace.Peer, Permission.Write)
 async def synchronize(request: Request) -> JSONResponse:
     """
     responses:

@@ -11,13 +11,6 @@ from horao.logical.resource import Compute, ResourceDefinition, Storage
 from horao.physical.computer import Computer
 from horao.physical.hardware import Hardware
 from horao.physical.storage import StorageType
-from horao.rbac.roles import (
-    Delegate,
-    NetworkEngineer,
-    SecurityEngineer,
-    SystemEngineer,
-    TenantOwner,
-)
 
 
 class Claim(ABC):
@@ -84,7 +77,6 @@ class Maintenance(Claim):
         start: datetime,
         end: datetime,
         reason: str,
-        operator: SecurityEngineer | SystemEngineer | NetworkEngineer,
         target: List[DataCenter | DataCenterNetwork | Computer | Hardware],
     ):
         """
@@ -98,7 +90,6 @@ class Maintenance(Claim):
         """
         super().__init__(name, start, end)
         self.reason = reason
-        self.operator = operator
         self.target = target
 
     def __eq__(self, other) -> bool:
@@ -107,14 +98,11 @@ class Maintenance(Claim):
         return (
             super().__eq__(other)
             and self.reason == other.reason
-            and self.operator == other.operator
             and self.target == other.target
         )
 
     def __hash__(self):
-        return hash(
-            (self.name, self.start, self.end, self.reason, self.operator, self.target)
-        )
+        return hash((self.name, self.start, self.end, self.reason, self.target))
 
 
 class Reservation(Claim):

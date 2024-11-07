@@ -6,15 +6,14 @@ import logging
 from typing import (
     Callable,
     Dict,
-    Generic,
     Hashable,
     Iterable,
+    Iterator,
     List,
     Optional,
     Set,
     Tuple,
     TypeVar,
-    Any,
 )
 
 from horao.conceptual.decorators import instrument_class_function
@@ -777,29 +776,34 @@ class CRDTList(List[T]):
             results.append(item.copy())
         return results
 
-    def extend(self, other: Iterable[T]) -> None:
+    def extend(self, other: Iterable[T]) -> CRDTList[T]:  # type: ignore
         for item in other:
             if item not in self.items.read():
                 self.items.set(len(self), item, hash(item))
+        return self
 
-    def index(self, item: T, **kwargs: Any) -> int:
+    def index(
+        self, item: T, start: Optional[int] = None, stop: Optional[int] = None  # type: ignore
+    ) -> int:
         """
         Return the index of the hardware instance
         :param item: instance to search for
-        :param kwargs: additional arguments
+        :param start: start index
+        :param stop: stop index
         :return: int
         :raises ValueError: item not found
         """
-        result = next(
-            iter([i for i, h in self.items.read() if h == item]),
-            None,
-        )
-        if result is None:
-            self.log.error(f"{item} not found.")
-            raise ValueError(f"{item} not found.")
-        return result
+        for i in range(len(self)):
+            if start is not None and i < start:
+                continue
+            if stop is not None and i > stop:
+                continue
+            if self.items.read()[i] == item:
+                return i
+        self.log.error(f"{item} not found.")
+        raise ValueError(f"{item} not found.")
 
-    def insert(self, index: int, item: T) -> None:
+    def insert(self, index: int, item: T) -> None:  # type: ignore
         self.items.set(index, item, hash(item))
 
     @instrument_class_function(name="pop", level=logging.DEBUG)
@@ -836,21 +840,21 @@ class CRDTList(List[T]):
             return False
         return self.items.read() == other.items.read()
 
-    def __contains__(self, item: T) -> bool:
+    def __contains__(self, item: T) -> bool:  # type: ignore
         return item in self.items.read()
 
-    def __delitem__(self, item: T) -> None:
+    def __delitem__(self, item: T) -> None:  # type: ignore
         if item not in self.items.read():
             raise KeyError(f"{item} not found.")
         self.remove(item)
 
-    def __getitem__(self, index: int) -> T:
+    def __getitem__(self, index: int) -> T:  # type: ignore
         return self.items.read()[index]
 
-    def __setitem__(self, index: int, value: T) -> None:
+    def __setitem__(self, index: int, value: T) -> None:  # type: ignore
         self.items.set(index, value, hash(value))
 
-    def __iter__(self) -> Iterable[T]:
+    def __iter__(self) -> Iterator[T]:
         for _, item in self.items.read().items():
             yield item
 
@@ -862,7 +866,7 @@ class CRDTList(List[T]):
         self.iterator += 1
         return item
 
-    def __add__(self, other: CRDTList[T]) -> CRDTList[T]:
+    def __add__(self, other: CRDTList[T]) -> CRDTList[T]:  # type: ignore
         return self.extend(iter(other))
 
     def __sub__(self, other: CRDTList[T]) -> CRDTList[T]:
@@ -877,7 +881,7 @@ class CRDTList(List[T]):
         return self.items.read()[::-1]
 
     def __sizeof__(self) -> int:
-        return self.count()
+        return self.__len__()
 
     def __hash__(self):
         return hash(self.items)

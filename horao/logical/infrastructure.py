@@ -130,7 +130,7 @@ class LogicalInfrastructure:
                                 Compute(
                                     sum([c.cores for c in n.cpus]),  # type: ignore
                                     sum([r.size_gb for r in n.rams]),  # type: ignore
-                                    len(n.accelerators) > 0,
+                                    len([m.accelerators for m in n.modules]) > 0,
                                     len(n.modules),
                                 )
                             )

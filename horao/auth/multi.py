@@ -17,35 +17,7 @@ from starlette.authentication import (
 )
 from starlette.requests import HTTPConnection
 
-
-class Peer(BaseUser):
-    def __init__(self, identity: str, token: str, payload, origin: str) -> None:
-        self.id = identity
-        self.token = token
-        self.payload = payload
-        self.origin = origin
-
-    @property
-    def is_authenticated(self) -> bool:
-        return True
-
-    @property
-    def display_name(self) -> str:
-        return self.origin
-
-    @property
-    def identity(self) -> str:
-        return self.id
-
-    def is_true(self) -> bool:
-        """
-        Check if the identity matches the origin.
-        :return: bool
-        """
-        return self.identity == self.origin
-
-    def __str__(self) -> str:
-        return f"{self.origin} -> {self.identity}"
+from horao.auth.roles import Peer
 
 
 class MultiAuthBackend(AuthenticationBackend):
@@ -54,20 +26,21 @@ class MultiAuthBackend(AuthenticationBackend):
     def digest_authentication(
         self, conn: HTTPConnection, token: str
     ) -> Union[None, Tuple[AuthCredentials, BaseUser]]:
+        host = conn.client.host  # type: ignore
         peer_match_source = False
         for peer in os.getenv("PEERS").split(","):  # type: ignore
-            if peer in conn.client.host:
+            if peer in host:
                 self.logger.debug(f"Peer {peer} is trying to authenticate")
                 peer_match_source = True
         if not peer_match_source and os.getenv("PEER_STRICT", "True") == "True":
-            raise AuthenticationError(f"access not allowed for {conn.client.host}")
+            raise AuthenticationError(f"access not allowed for {host}")
         payload = jwt.decode(token, os.getenv("PEER_SECRET"), algorithms=["HS256"])  # type: ignore
         self.logger.debug(f"valid token for {payload['peer']}")
-        return AuthCredentials(["authenticated_peer"]), Peer(
+        return AuthCredentials(["authenticated"]), Peer(
             identity=payload["peer"],
             token=token,
             payload=payload,
-            origin=conn.client.host,
+            origin=host,
         )
 
     async def authenticate(
@@ -93,4 +66,4 @@ class MultiAuthBackend(AuthenticationBackend):
             binascii.Error,
         ) as exc:
             self.logger.error(f"Invalid token for peer ({exc})")
-            raise AuthenticationError(f"access not allowed for {conn.client.host}")
+            raise AuthenticationError(f"access not allowed for {conn.client.host}")  # type: ignore

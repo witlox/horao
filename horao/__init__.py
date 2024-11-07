@@ -9,6 +9,7 @@ and software resources of the system.
 """
 import logging
 import os
+from typing import Optional
 
 from opentelemetry import metrics, trace  # type: ignore
 from opentelemetry.instrumentation.logging import LoggingInstrumentor  # type: ignore
@@ -121,7 +122,7 @@ async def docs(request):
     return HTMLResponse(html)
 
 
-def init(authorization: AuthenticationBackend = None) -> Starlette:
+def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
     """
     Initialize the API
     authorization: optional authorization backend to overwrite default behavior (useful for testing)
