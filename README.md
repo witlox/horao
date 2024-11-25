@@ -43,10 +43,16 @@ The docker way, either use the `devcontainer` or run with `docker-compose`:
 ## Settings
 
 The settings are stored in a `.env` file. The default selected by poetry is `.env` which is configured for development.
-The following settings are available:
-- DEBUG: boolean, default=False; set to True to enable debug mode
-- UI: boolean, default=False; set to True to enable the UI for the API
-- CORS: string, default="*"; set to the allowed origins for CORS
-- PEER_SECRET: string, default=""; set the secret for authenticating peers 
-- CLOCK_OFFSET: float, default=0.0; set the allowed clock offset for synchronization
-- REDIS_URL: string, default="redis://redis:6379/0"; set the URL for the Redis database
+The following settings can be configured:
+```dotenv
+DEBUG: False #boolean, default=False; set to True to enable debug mode, very chatty
+UI: False #boolean, default=False; set to True to enable the UI for the API
+CORS: * #string, default=*; set to the allowed origins for CORS
+PEER_SECRET: "abracadabra" #string, default=""; set the secret for authenticating peers
+PEERS: "a,b,c" #string, default=""; set the comma seperated list of peers to sync with 
+CLOCK_OFFSET: 0.0 #float, default=0.0; set the allowed clock offset for synchronization
+REDIS_URL: redis://localhost:6379/0 #string, default="redis://redis:6379/0"; set the URL for the Redis database
+```
+
+For Telemetry environment variables, see [Telemetry](docs/Telemetry.md).
+

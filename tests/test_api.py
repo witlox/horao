@@ -45,7 +45,7 @@ def test_synchronize_simple_structure():
         assert 403 == lg.status_code
         lg = client.post(
             "/synchronize",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Peer": "true", "Authorization": f"Bearer {token}"},
             json=json.dumps(infrastructure, cls=HoraoEncoder),
         )
         assert 200 == lg.status_code

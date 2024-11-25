@@ -139,6 +139,8 @@ def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
         logger.warning("CORS is set to *")
     routes = [
         Route("/ping", endpoint=horao.api.alive_controller.is_alive, methods=["GET"]),
+        Route("/login", endpoint=horao.api.authenticate.login, methods=["POST"]),
+        Route("/logout", endpoint=horao.api.authenticate.logout, methods=["POST"]),
         Route(
             "/synchronize",
             endpoint=horao.api.synchronization.synchronize,
