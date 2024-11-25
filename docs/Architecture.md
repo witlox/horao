@@ -25,6 +25,21 @@ We recommend to use NTP to synchronize the clocks, and if needed one can set an 
 Because of the nature of the design, split-brain situations should not exist. 
 We will synchronize state via the `HORAO` API (over websockets in starlette).
 Persistent storage will be provided by a key-value database (Redis).
+The synchronization mechanism used by the CRDTs is based on a Lamport Logical Clock, using a vector based on unix timestamps.
+Due to the nature of this, we may want to allow for a 'small' clock-skew.
+This can be configured in the `.env` file as follows:
+```dotenv
+CLOCK_OFFSET: 0.0 #float, default=0.0; set the allowed clock offset for synchronization
+```
+
+### Backpressure and timing
+The formula for synchronizing state is `t > now - t' OR s > max` where `t` is the configured delta, `now` is the current time and `t'` is the time since the last synchronization, `s` is the count of changes on the stack and `max` is the stack count threshold.
+If the formula evaluates to true, the state is synchronized and counters are reset to zero.
+The following environment variables in the .env file are used to configure the synchronization:
+```dotenv
+SYNC_DELTA=180  #integer, default=180; time delta in seconds
+SYNC_MAX=1000 #integer, default=1000; number of changes since last sync
+```
 
 # Design assumptions
 

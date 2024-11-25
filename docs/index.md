@@ -6,4 +6,5 @@ These pages are currently available:
 - [Architecture](./Architecture.md)
 - [Development notes](./Development.md)
 - [Creating a virtual environment](./CreateVirtualEnv.md)
+- [Authentication](./Authentication.md)
 - [Telemetry](./Telemetry.md)
