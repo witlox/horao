@@ -50,6 +50,19 @@ class Computer(ABC):
             items=accelerators if isinstance(accelerators, HardwareList) else None,  # type: ignore
         )
 
+    def stack_changes(self) -> int:
+        """
+        Return the number of changes in the stack
+        :return: int
+        """
+        return (
+            self.cpus.stack_changes()
+            + self.rams.stack_changes()
+            + self.nics.stack_changes()
+            + self.disks.stack_changes()
+            + self.accelerators.stack_changes()
+        )
+
     def __copy__(self):
         return Computer(
             self.serial_number,

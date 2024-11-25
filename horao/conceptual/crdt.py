@@ -747,18 +747,66 @@ class CRDTList(List[T]):
         self,
         content: Optional[List[T]] = None,
         items: Optional[LastWriterWinsMap] = None,
+        listeners: Optional[List[Callable]] = None,
     ) -> None:
         """
         Initialize from an LastWriterWinsMap of item positions and a shared clock if supplied otherwise default.
         :param content: list of T instances
         :param items: LastWriterWinsMap of T items
+        :param listeners: list of Callable listeners
         """
         super().__init__()
         self.log = logging.getLogger(__name__)
-        self.items = LastWriterWinsMap() if not items else items
+        self.listeners = listeners if listeners else []
+        self.change_count = 0
+        self.items = (
+            LastWriterWinsMap(listeners=[self.increase_change_count])
+            if not items
+            else items
+        )
         if content:
             self.extend(content)
         self.iterator = 0
+
+    def add_listeners(self, listener: Callable) -> None:
+        """
+        Adds a listener that is called on each update.
+        :param listener: Callable[[Update], None]
+        :return: None
+        """
+        self.listeners.append(listener)
+
+    def remove_listeners(self, listener: Callable) -> None:
+        """
+        Removes a listener if it was previously added.
+        :param listener: Callable[[Update], None]
+        :return: None
+        """
+        self.listeners.remove(listener)
+
+    def invoke_listeners(self) -> None:
+        """
+        Invokes all event listeners.
+        :return: None
+        """
+        for listener in self.listeners:
+            listener()
+
+    def increase_change_count(self, update: Update) -> None:
+        """
+        Increase the change count.
+        :param update: change to process
+        :return: None
+        """
+        self.change_count += 1
+        self.invoke_listeners()
+
+    def stack_changes(self) -> int:
+        """
+        Return the number of changes.
+        :return: int
+        """
+        return self.change_count
 
     @instrument_class_function(name="append", level=logging.DEBUG)
     def append(self, item: T) -> T:

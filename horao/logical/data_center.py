@@ -55,6 +55,56 @@ class DataCenter:
             for k, v in items.items():
                 self.rows.set(k, v, hash(k))  # type: ignore
 
+        def attach_change_listeners(c: Computer):
+            c.cpus.add_listeners(self.summed_change_count)
+            c.rams.add_listeners(self.summed_change_count)
+            c.disks.add_listeners(self.summed_change_count)
+            c.nics.add_listeners(self.summed_change_count)
+            c.accelerators.add_listeners(self.summed_change_count)
+
+        for _, v in self.rows.read().items():
+            for cabinet in v:
+                cabinet.servers.add_listeners(self.summed_change_count)
+                for server in cabinet.servers:
+                    attach_change_listeners(server)
+                cabinet.chassis.add_listeners(self.summed_change_count)
+                for chassis in cabinet.chassis:
+                    chassis.servers.add_listeners(self.summed_change_count)
+                    for server in chassis.servers:
+                        attach_change_listeners(server)
+                    chassis.blades.add_listeners(self.summed_change_count)
+                    for blade in chassis.blades:
+                        blade.nodes.add_listeners(self.summed_change_count)
+                        for node in blade.nodes:
+                            node.modules.add_listeners(self.summed_change_count)
+                            for module in node.modules:
+                                attach_change_listeners(module)
+                cabinet.switches.add_listeners(self.summed_change_count)
+                for switch in cabinet.switches:
+                    switch.ports.add_listeners(self.summed_change_count)
+
+    def summed_change_count(self) -> int:
+        """
+        Sum the change count of all components in the data center
+        :return: int
+        """
+        total = 0
+        for _, v in self.rows.read().items():
+            for cabinet in v:
+                for server in cabinet.servers:
+                    total += server.stack_changes()
+                for chassis in cabinet.chassis:
+                    total += chassis.stack_changes()
+                    for blade in chassis.blades:
+                        total += blade.stack_changes()
+                        for node in blade.nodes:
+                            total += node.stack_changes()
+                            for module in node.modules:
+                                total += module.stack_changes()
+                for switch in cabinet.switches:
+                    total += switch.stack_changes()
+        return total
+
     def clear(self) -> None:
         self.rows = LastWriterWinsMap()
 
@@ -108,6 +158,26 @@ class DataCenter:
                         self[number][self[number].index(cabinet)].merge(cabinet)
             else:
                 self[number] = row
+
+        # reset change counters
+        def reset_server_counters(s: Server):
+            s.cpus.change_count = 0
+            s.rams.change_count = 0
+            s.disks.change_count = 0
+            s.nics.change_count = 0
+            s.accelerators.change_count = 0
+
+        for _, v in self.rows.read().items():
+            for cabinet in v:
+                for server in cabinet.servers:
+                    reset_server_counters(server)
+                for chassis in cabinet.chassis:
+                    for blade in chassis.blades:
+                        for node in blade.nodes:
+                            for module in node.modules:
+                                reset_server_counters(module)
+                cabinet.switches.change_count = 0
+            v.change_count = 0
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, DataCenter):

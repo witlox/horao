@@ -4,6 +4,7 @@ from horao.conceptual.crdt import (
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
+    CRDTList,
 )
 from horao.conceptual.support import LogicalClock, Update
 
@@ -472,3 +473,12 @@ def test_lww_map_event_listeners_e2e():
     lww_map.remove_listener(add_log)
     lww_map.set("name", "value", "writer id")
     assert len(logs) == 1
+
+
+def test_crdtlist_changes_counted():
+    crdtl = CRDTList()
+    assert crdtl.stack_changes() == 0
+    crdtl.append(1)
+    assert crdtl.stack_changes() == 1
+    crdtl.append(2)
+    assert crdtl.stack_changes() == 2
