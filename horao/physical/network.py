@@ -121,8 +121,8 @@ class NetworkDevice(Hardware):
             ports if isinstance(ports, HardwareList) else HardwareList[Port](ports)
         )
 
-    def stack_changes(self) -> int:
-        return self.ports.stack_changes()
+    def change_count(self) -> int:
+        return self.ports.change_count()
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, NetworkDevice):

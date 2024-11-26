@@ -29,7 +29,7 @@ The synchronization mechanism used by the CRDTs is based on a Lamport Logical Cl
 Due to the nature of this, we may want to allow for a 'small' clock-skew.
 This can be configured in the `.env` file as follows:
 ```dotenv
-CLOCK_OFFSET: 0.0 #float, default=0.0; set the allowed clock offset for synchronization
+CLOCK_OFFSET: 0.0 #float, default=0.0; set the allowed clock offset in seconds (or fraction of) for synchronization
 ```
 
 ### Backpressure and timing

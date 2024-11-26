@@ -758,7 +758,7 @@ class CRDTList(List[T]):
         super().__init__()
         self.log = logging.getLogger(__name__)
         self.listeners = listeners if listeners else []
-        self.change_count = 0
+        self._change_count = 0
         self.items = (
             LastWriterWinsMap(listeners=[self.increase_change_count])
             if not items
@@ -798,15 +798,22 @@ class CRDTList(List[T]):
         :param update: change to process
         :return: None
         """
-        self.change_count += 1
+        self._change_count += 1
         self.invoke_listeners()
 
-    def stack_changes(self) -> int:
+    def change_count(self) -> int:
         """
         Return the number of changes.
         :return: int
         """
-        return self.change_count
+        return self._change_count
+
+    def reset_change_count(self) -> None:
+        """
+        Reset the change count.
+        :return: None
+        """
+        self._change_count = 0
 
     @instrument_class_function(name="append", level=logging.DEBUG)
     def append(self, item: T) -> T:

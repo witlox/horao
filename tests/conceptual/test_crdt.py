@@ -477,8 +477,8 @@ def test_lww_map_event_listeners_e2e():
 
 def test_crdtlist_changes_counted():
     crdtl = CRDTList()
-    assert crdtl.stack_changes() == 0
+    assert crdtl.change_count() == 0
     crdtl.append(1)
-    assert crdtl.stack_changes() == 1
+    assert crdtl.change_count() == 1
     crdtl.append(2)
-    assert crdtl.stack_changes() == 2
+    assert crdtl.change_count() == 2

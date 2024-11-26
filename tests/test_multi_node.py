@@ -41,5 +41,5 @@ async def test_backpressure_two_instances():
     os.environ["PEER_SECRET"] = "secret"
     dc, dcn = initialize_logical_infrastructure()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
-    assert dc.summed_change_count() == 14
+    assert dc.change_count() == 14
     # todo: logic needed for actual backpressure test

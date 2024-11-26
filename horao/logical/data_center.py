@@ -56,34 +56,34 @@ class DataCenter:
                 self.rows.set(k, v, hash(k))  # type: ignore
 
         def attach_change_listeners(c: Computer):
-            c.cpus.add_listeners(self.summed_change_count)
-            c.rams.add_listeners(self.summed_change_count)
-            c.disks.add_listeners(self.summed_change_count)
-            c.nics.add_listeners(self.summed_change_count)
-            c.accelerators.add_listeners(self.summed_change_count)
+            c.cpus.add_listeners(self.change_count)
+            c.rams.add_listeners(self.change_count)
+            c.disks.add_listeners(self.change_count)
+            c.nics.add_listeners(self.change_count)
+            c.accelerators.add_listeners(self.change_count)
 
         for _, v in self.rows.read().items():
             for cabinet in v:
-                cabinet.servers.add_listeners(self.summed_change_count)
+                cabinet.servers.add_listeners(self.change_count)
                 for server in cabinet.servers:
                     attach_change_listeners(server)
-                cabinet.chassis.add_listeners(self.summed_change_count)
+                cabinet.chassis.add_listeners(self.change_count)
                 for chassis in cabinet.chassis:
-                    chassis.servers.add_listeners(self.summed_change_count)
+                    chassis.servers.add_listeners(self.change_count)
                     for server in chassis.servers:
                         attach_change_listeners(server)
-                    chassis.blades.add_listeners(self.summed_change_count)
+                    chassis.blades.add_listeners(self.change_count)
                     for blade in chassis.blades:
-                        blade.nodes.add_listeners(self.summed_change_count)
+                        blade.nodes.add_listeners(self.change_count)
                         for node in blade.nodes:
-                            node.modules.add_listeners(self.summed_change_count)
+                            node.modules.add_listeners(self.change_count)
                             for module in node.modules:
                                 attach_change_listeners(module)
-                cabinet.switches.add_listeners(self.summed_change_count)
+                cabinet.switches.add_listeners(self.change_count)
                 for switch in cabinet.switches:
-                    switch.ports.add_listeners(self.summed_change_count)
+                    switch.ports.add_listeners(self.change_count)
 
-    def summed_change_count(self) -> int:
+    def change_count(self) -> int:
         """
         Sum the change count of all components in the data center
         :return: int
@@ -92,21 +92,18 @@ class DataCenter:
         for _, v in self.rows.read().items():
             for cabinet in v:
                 for server in cabinet.servers:
-                    total += server.stack_changes()
+                    total += server.change_count()
                 for chassis in cabinet.chassis:
-                    total += chassis.stack_changes()
+                    total += chassis.change_count()
                     for blade in chassis.blades:
-                        total += blade.stack_changes()
+                        total += blade.change_count()
                         for node in blade.nodes:
-                            total += node.stack_changes()
+                            total += node.change_count()
                             for module in node.modules:
-                                total += module.stack_changes()
+                                total += module.change_count()
                 for switch in cabinet.switches:
-                    total += switch.stack_changes()
+                    total += switch.change_count()
         return total
-
-    def clear(self) -> None:
-        self.rows = LastWriterWinsMap()
 
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:
@@ -161,11 +158,11 @@ class DataCenter:
 
         # reset change counters
         def reset_server_counters(s: Server):
-            s.cpus.change_count = 0
-            s.rams.change_count = 0
-            s.disks.change_count = 0
-            s.nics.change_count = 0
-            s.accelerators.change_count = 0
+            s.cpus.reset_change_count()
+            s.rams.reset_change_count()
+            s.disks.reset_change_count()
+            s.nics.reset_change_count()
+            s.accelerators.reset_change_count()
 
         for _, v in self.rows.read().items():
             for cabinet in v:
@@ -176,8 +173,8 @@ class DataCenter:
                         for node in blade.nodes:
                             for module in node.modules:
                                 reset_server_counters(module)
-                cabinet.switches.change_count = 0
-            v.change_count = 0
+                cabinet.switches.reset_change_count()
+            v.reset_change_count()
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, DataCenter):
