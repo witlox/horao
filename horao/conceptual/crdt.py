@@ -760,7 +760,7 @@ class CRDTList(List[T]):
         self.listeners = listeners if listeners else []
         self._change_count = 0
         self.items = (
-            LastWriterWinsMap(listeners=[self.increase_change_count])
+            LastWriterWinsMap(listeners=[self.increase_change_count] + self.listeners)
             if not items
             else items
         )

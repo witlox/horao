@@ -2,8 +2,9 @@
 """Data Center composites"""
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import networkx as nx  # type: ignore
 from networkx.classes import Graph  # type: ignore
@@ -39,6 +40,7 @@ class DataCenter:
         number: int,
         rows: Optional[LastWriterWinsMap] = None,
         items: Optional[Dict[int, List[Cabinet]]] = None,
+        listeners: Optional[List[Callable]] = None,
     ) -> None:
         """
         Initialize a data center
@@ -46,42 +48,70 @@ class DataCenter:
         :param number: unique number referring to potential AZ
         :param rows: optional LastWriterWinsMap of rows
         :param items: optional dictionary of rows (number, list of cabinets)
+        :param listeners: optional list of listeners
         """
         self.log = logging.getLogger(__name__)
         self.name = name
         self.number = number
+        self.listeners = listeners if listeners else []
         self.rows = LastWriterWinsMap() if not rows else rows
         if items:
             for k, v in items.items():
                 self.rows.set(k, v, hash(k))  # type: ignore
 
         def attach_change_listeners(c: Computer):
-            c.cpus.add_listeners(self.change_count)
-            c.rams.add_listeners(self.change_count)
-            c.disks.add_listeners(self.change_count)
-            c.nics.add_listeners(self.change_count)
-            c.accelerators.add_listeners(self.change_count)
+            c.cpus.add_listeners(self.invoke_listeners)
+            c.rams.add_listeners(self.invoke_listeners)
+            c.disks.add_listeners(self.invoke_listeners)
+            c.nics.add_listeners(self.invoke_listeners)
+            c.accelerators.add_listeners(self.invoke_listeners)
 
         for _, v in self.rows.read().items():
             for cabinet in v:
-                cabinet.servers.add_listeners(self.change_count)
+                cabinet.servers.add_listeners(self.invoke_listeners)
                 for server in cabinet.servers:
                     attach_change_listeners(server)
-                cabinet.chassis.add_listeners(self.change_count)
+                cabinet.chassis.add_listeners(self.invoke_listeners)
                 for chassis in cabinet.chassis:
-                    chassis.servers.add_listeners(self.change_count)
+                    chassis.servers.add_listeners(self.invoke_listeners)
                     for server in chassis.servers:
                         attach_change_listeners(server)
-                    chassis.blades.add_listeners(self.change_count)
+                    chassis.blades.add_listeners(self.invoke_listeners)
                     for blade in chassis.blades:
-                        blade.nodes.add_listeners(self.change_count)
+                        blade.nodes.add_listeners(self.invoke_listeners)
                         for node in blade.nodes:
-                            node.modules.add_listeners(self.change_count)
+                            node.modules.add_listeners(self.invoke_listeners)
                             for module in node.modules:
                                 attach_change_listeners(module)
-                cabinet.switches.add_listeners(self.change_count)
+                cabinet.switches.add_listeners(self.invoke_listeners)
                 for switch in cabinet.switches:
-                    switch.ports.add_listeners(self.change_count)
+                    switch.ports.add_listeners(self.invoke_listeners)
+
+    def add_listeners(self, listener: Callable) -> None:
+        """
+        Adds an async listener that is called on each update.
+        :param listener: Callable
+        :return: None
+        """
+        if not listener in self.listeners:
+            self.listeners.append(listener)
+
+    def remove_listeners(self, listener: Callable) -> None:
+        """
+        Removes a listener if it was previously added.
+        :param listener: Callable[[Update], None]
+        :return: None
+        """
+        if listener in self.listeners:
+            self.listeners.remove(listener)
+
+    def invoke_listeners(self) -> None:
+        """
+        Invokes all async event listeners.
+        :return: None
+        """
+        for listener in self.listeners:
+            asyncio.create_task(listener())
 
     def change_count(self) -> int:
         """

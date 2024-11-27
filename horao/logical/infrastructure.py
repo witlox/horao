@@ -38,6 +38,13 @@ class LogicalInfrastructure:
         self.constraints = constraints or {}
         self.claims = claims or {}
 
+    def change_count(self) -> int:
+        """
+        Count the number of changes in the infrastructure.
+        :return: number of changes
+        """
+        return sum([d.change_count() for d in self.infrastructure.keys()])
+
     def clear(self) -> None:
         self.infrastructure.clear()
 

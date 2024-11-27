@@ -23,6 +23,33 @@ class Store:
             self.redis = redis.Redis.from_url(url)
         self.memory: Dict[str, Any] = {}
 
+    async def keys(self) -> Dict[str, Any] | Any:
+        """
+        Return all keys in the store
+        :return: keys
+        """
+        if hasattr(self, "redis"):
+            return await self.redis.keys()
+        return self.memory.keys()
+
+    async def values(self) -> Dict[str, Any] | Any:
+        """
+        Return all values in the store
+        :return: values
+        """
+        if hasattr(self, "redis"):
+            return await self.redis.values()
+        return self.memory.values()
+
+    async def items(self) -> Dict[str, Any] | Any:
+        """
+        Return all items in the store
+        :return: items
+        """
+        if hasattr(self, "redis"):
+            return await self.redis.items()
+        return self.memory.items()
+
     @instrument_class_function(name="load", level=logging.DEBUG)
     async def load(self, key: str) -> Any | None:
         """
