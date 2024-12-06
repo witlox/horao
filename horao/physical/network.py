@@ -117,12 +117,16 @@ class NetworkDevice(Hardware):
         self, serial_number, model, number, ports: List[Port] | HardwareList[Port]
     ):
         super().__init__(serial_number, model, number)
-        self.ports = (
+        self._ports = (
             ports if isinstance(ports, HardwareList) else HardwareList[Port](ports)
         )
 
+    @property
+    def ports(self) -> List[Port]:
+        return list(iter(self._ports))
+
     def change_count(self) -> int:
-        return self.ports.change_count()
+        return self._ports.change_count()
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, NetworkDevice):
@@ -130,7 +134,7 @@ class NetworkDevice(Hardware):
         return (
             self.serial_number == other.serial_number
             and self.model == other.model
-            and len(self.ports) == len(other.ports)
+            and self.ports == other.ports
         )
 
     def __gt__(self, other) -> bool:
@@ -172,14 +176,18 @@ class Firewall(NetworkDevice):
         super().__init__(serial_number, model, number, lan_ports)
         self.name = name
         self.status = status
-        self.wan_ports = (
+        self._wan_ports = (
             wan_ports
             if isinstance(wan_ports, HardwareList)
             else HardwareList[Port](wan_ports)
         )
 
+    @property
+    def wan_ports(self) -> List[Port]:
+        return list(iter(self._wan_ports))
+
     def change_count(self) -> int:
-        return super().change_count() + self.wan_ports.change_count()
+        return super().change_count() + self._wan_ports.change_count()
 
     def __eq__(self, other):
         if not isinstance(other, Firewall):
@@ -187,8 +195,8 @@ class Firewall(NetworkDevice):
         return (
             self.serial_number == other.serial_number
             and self.model == other.model
-            and len(self.ports) == len(other.ports)
-            and len(self.wan_ports) == len(other.wan_ports)
+            and self.ports == other.ports
+            and self.wan_ports == other.wan_ports
         )
 
     def __hash__(self):
@@ -211,14 +219,18 @@ class Router(NetworkDevice):
         self.name = name
         self.router_type = router_type
         self.status = status
-        self.wan_ports = (
+        self._wan_ports = (
             wan_ports
             if isinstance(wan_ports, HardwareList)
             else HardwareList[Port](wan_ports)
         )
 
+    @property
+    def wan_ports(self) -> List[Port]:
+        return list(iter(self._wan_ports))
+
     def change_count(self) -> int:
-        return super().change_count() + self.wan_ports.change_count()
+        return super().change_count() + self._wan_ports.change_count()
 
     def __eq__(self, other):
         if not isinstance(other, Router):
@@ -227,8 +239,8 @@ class Router(NetworkDevice):
             self.serial_number == other.serial_number
             and self.model == other.model
             and self.router_type == other.router_type
-            and len(self.ports) == len(other.ports)
-            and len(self.wan_ports) == len(other.wan_ports)
+            and self.ports == other.ports
+            and self.wan_ports == other.wan_ports
         )
 
     def __hash__(self):
@@ -255,14 +267,18 @@ class Switch(NetworkDevice):
         self.switch_type = switch_type
         self.status = status
         self.managed = managed
-        self.uplink_ports = (
+        self._uplink_ports = (
             uplink_ports
             if isinstance(uplink_ports, HardwareList)
             else HardwareList[Port](uplink_ports)
         )
 
+    @property
+    def uplink_ports(self) -> List[Port]:
+        return list(iter(self._uplink_ports))
+
     def change_count(self) -> int:
-        return super().change_count() + self.uplink_ports.change_count()
+        return super().change_count() + self._uplink_ports.change_count()
 
     def __eq__(self, other):
         if not isinstance(other, Switch):
@@ -272,8 +288,8 @@ class Switch(NetworkDevice):
             and self.model == other.model
             and self.layer == other.layer
             and self.switch_type == other.switch_type
-            and len(self.ports) == len(other.ports)
-            and len(self.uplink_ports) == len(other.uplink_ports)
+            and self.ports == other.ports
+            and self.uplink_ports == other.uplink_ports
         )
 
     def __hash__(self):

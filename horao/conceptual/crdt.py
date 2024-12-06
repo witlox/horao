@@ -253,7 +253,8 @@ class ObservedRemovedSet(CRDT):
         :param listener: Callable[[Update], None]
         :return: None
         """
-        self.listeners.append(listener)
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def remove_listener(self, listener: Callable[[Update], None]) -> None:
         """
@@ -261,7 +262,8 @@ class ObservedRemovedSet(CRDT):
         :param listener: Callable[[Update], None]
         :return: None
         """
-        self.listeners.remove(listener)
+        if listener in self.listeners:
+            self.listeners.remove(listener)
 
     def invoke_listeners(self, state_update: Update) -> None:
         """
@@ -434,7 +436,8 @@ class LastWriterWinsRegister(CRDT):
         :param listener: Callable[[Update], None]
         :return: None
         """
-        self.listeners.append(listener)
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def remove_listener(self, listener: Callable[[Update], None]) -> None:
         """
@@ -442,7 +445,8 @@ class LastWriterWinsRegister(CRDT):
         :param listener: Callable[[Update], None]
         :return: None
         """
-        self.listeners.remove(listener)
+        if listener in self.listeners:
+            self.listeners.remove(listener)
 
     def invoke_listeners(self, state_update: Update) -> None:
         """
@@ -703,7 +707,8 @@ class LastWriterWinsMap(CRDT):
         :param listener: to add
         :return: None
         """
-        self.listeners.append(listener)
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def remove_listener(self, listener: Callable[[Update], None]) -> None:
         """
@@ -711,9 +716,10 @@ class LastWriterWinsMap(CRDT):
         :param listener: to remove
         :return: None
         """
-        self.listeners.remove(listener)
+        if listener in self.listeners:
+            self.listeners.remove(listener)
 
-    def invoke_listeners(self, state_update: Update) -> None:
+    def invoke_listeners(self, state_update: Optional[Update]) -> None:
         """
         Invokes all event listeners, passing them the state_update.
         :param state_update: Update
@@ -760,7 +766,7 @@ class CRDTList(List[T]):
         self.listeners = listeners if listeners else []
         self._change_count = 0
         self.items = (
-            LastWriterWinsMap(listeners=[self.increase_change_count] + self.listeners)
+            LastWriterWinsMap(listeners=[self.increase_change_count])
             if not items
             else items
         )
@@ -774,7 +780,8 @@ class CRDTList(List[T]):
         :param listener: Callable[[Update], None]
         :return: None
         """
-        self.listeners.append(listener)
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def remove_listeners(self, listener: Callable) -> None:
         """
@@ -782,24 +789,25 @@ class CRDTList(List[T]):
         :param listener: Callable[[Update], None]
         :return: None
         """
-        self.listeners.remove(listener)
+        if listener in self.listeners:
+            self.listeners.remove(listener)
 
-    def invoke_listeners(self) -> None:
+    def invoke_listeners(self, update: Optional[Update] = None) -> None:
         """
         Invokes all event listeners.
         :return: None
         """
         for listener in self.listeners:
-            listener()
+            listener(update)
 
-    def increase_change_count(self, update: Update) -> None:
+    def increase_change_count(self, update: Optional[Update] = None) -> None:
         """
         Increase the change count.
         :param update: change to process
         :return: None
         """
         self._change_count += 1
-        self.invoke_listeners()
+        self.invoke_listeners(update)
 
     def change_count(self) -> int:
         """

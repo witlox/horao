@@ -8,6 +8,7 @@ from horao.logical.resource import Compute, Storage
 from horao.physical.storage import StorageType
 
 from .claim import Reservation
+from .crdt import CRDTList
 
 
 class Tenant:
@@ -15,13 +16,15 @@ class Tenant:
         self,
         name: str,
         owner: str,
-        delegates: Optional[List[str]] = None,
-        constraints: Optional[List[Constraint]] = None,
+        delegates: Optional[CRDTList[str]] = None,
+        constraints: Optional[CRDTList[Constraint]] = None,
     ):
         self.name = name
         self.owner = owner
-        self.delegates = delegates if delegates is not None else []
-        self.constraints = constraints if constraints is not None else []
+        self.delegates = delegates if delegates is not None else CRDTList[str]()
+        self.constraints = (
+            constraints if constraints is not None else CRDTList[Constraint]()
+        )
 
     def __eq__(self, other):
         if not isinstance(other, Tenant):

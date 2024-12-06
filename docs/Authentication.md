@@ -18,6 +18,10 @@ These are comma separated values that are used to identify the peers that need t
 The synchronization happens over the 'synchronize' endpoint on the API.
 
 There is a 'PEER_STRICT' that defaults to 'True'. This means that the peers origin needs to be matched to the value supplied in the 'PEERS' environment variable. If 'PEER_STRICT' is set to 'False' then the origin of the peer is not checked.
+The hostname of the system should be fetched automatically, but on internal domains this can return faulty information, this hostname can be set manually:
+```dotenv
+HOST_ID=some.fqdn.com
+```
 
 ## Open ID Connect parts
 The following variables need to be set in the `.env` file:

@@ -22,7 +22,22 @@ class Node(Hardware):
     ):
         super().__init__(serial_number, model, number)
         self.name = name
-        self.modules = ComputerList[Module](modules)
+        self._modules = ComputerList[Module](modules)
+
+    def add_listener(self, listener):
+        if listener not in self._modules.listeners:
+            self._modules.add_listeners(listener)
+
+    def remove_listener(self, listener):
+        if listener in self._modules.listeners:
+            self._modules.remove_listeners(listener)
+
+    @property
+    def modules(self):
+        return list(iter(self._modules))
+
+    def change_count(self) -> int:
+        return self._modules.change_count()
 
     def __copy__(self):
         return Node(
@@ -30,7 +45,7 @@ class Node(Hardware):
             self.name,
             self.model,
             self.number,
-            list(iter(self.modules)),
+            self.modules,
         )
 
 
@@ -47,7 +62,22 @@ class Blade(Hardware):
     ):
         super().__init__(serial_number, model, number)
         self.name = name
-        self.nodes = HardwareList[Node](nodes)
+        self._nodes = HardwareList[Node](nodes)
+
+    def add_listener(self, listener):
+        if listener not in self._nodes.listeners:
+            self._nodes.add_listeners(listener)
+
+    def remove_listener(self, listener):
+        if listener in self._nodes.listeners:
+            self._nodes.remove_listeners(listener)
+
+    @property
+    def nodes(self):
+        return list(iter(self._nodes))
+
+    def change_count(self) -> int:
+        return self._nodes.change_count()
 
     def __copy__(self):
         return Blade(
@@ -55,7 +85,7 @@ class Blade(Hardware):
             self.name,
             self.model,
             self.number,
-            list(iter(self.nodes)),
+            self.nodes,
         )
 
 
@@ -73,8 +103,31 @@ class Chassis(Hardware):
     ):
         super().__init__(serial_number, model, number)
         self.name = name
-        self.servers = ComputerList[Server](servers)
-        self.blades = HardwareList[Blade](blades)
+        self._servers = ComputerList[Server](servers)
+        self._blades = HardwareList[Blade](blades)
+
+    def add_listener(self, listener):
+        if listener not in self._servers.listeners:
+            self._servers.add_listeners(listener)
+        if listener not in self._blades.listeners:
+            self._blades.add_listeners(listener)
+
+    def remove_listener(self, listener):
+        if listener in self._servers.listeners:
+            self._servers.remove_listeners(listener)
+        if listener in self._blades.listeners:
+            self._blades.remove_listeners(listener)
+
+    @property
+    def servers(self):
+        return list(iter(self._servers))
+
+    @property
+    def blades(self):
+        return list(iter(self._blades))
+
+    def change_count(self) -> int:
+        return self._servers.change_count() + self._blades.change_count()
 
     def __copy__(self):
         return Chassis(
@@ -82,8 +135,8 @@ class Chassis(Hardware):
             self.name,
             self.model,
             self.number,
-            list(iter(self.servers)),
-            list(iter(self.blades)),
+            self.servers,
+            self.blades,
         )
 
 
@@ -102,14 +155,53 @@ class Cabinet(Hardware):
     ):
         super().__init__(serial_number, model, number)
         self.name = name
-        self.servers = ComputerList[Server](servers)
-        self.chassis = HardwareList[Chassis](chassis)
-        self.switches = NetworkList[Switch](switches)
+        self._servers = ComputerList[Server](servers)
+        self._chassis = HardwareList[Chassis](chassis)
+        self._switches = NetworkList[Switch](switches)
 
-    def merge(self, other: Cabinet) -> None:
+    def add_listener(self, listener):
+        if listener not in self._servers.listeners:
+            self._servers.add_listeners(listener)
+        if listener not in self._chassis.listeners:
+            self._chassis.add_listeners(listener)
+        if listener not in self._switches.listeners:
+            self._switches.add_listeners(listener)
+
+    def remove_listener(self, listener):
+        if listener in self._servers.listeners:
+            self._servers.remove_listeners(listener)
+        if listener in self._chassis.listeners:
+            self._chassis.remove_listeners(listener)
+        if listener in self._switches.listeners:
+            self._switches.remove_listeners(listener)
+
+    @property
+    def servers(self):
+        return list(iter(self._servers))
+
+    @property
+    def chassis(self):
+        return list(iter(self._chassis))
+
+    @property
+    def switches(self):
+        return list(iter(self._switches))
+
+    def change_count(self) -> int:
+        return (
+            self._servers.change_count()
+            + self._chassis.change_count()
+            + self._switches.change_count()
+        )
+
+    def merge(self, other: Cabinet, reset_counters: bool = False) -> None:
         self.servers.extend(iter(other.servers))
         self.chassis.extend(iter(other.chassis))
         self.switches.extend(iter(other.switches))
+        if reset_counters:
+            self._servers.reset_change_count()
+            self._chassis.reset_change_count()
+            self._switches.reset_change_count()
 
     def __copy__(self):
         return Cabinet(
@@ -117,7 +209,7 @@ class Cabinet(Hardware):
             self.name,
             self.model,
             self.number,
-            list(iter(self.servers)),
-            list(iter(self.chassis)),
-            list(iter(self.switches)),
+            self.servers,
+            self.chassis,
+            self.switches,
         )

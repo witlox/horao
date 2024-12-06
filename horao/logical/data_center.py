@@ -11,6 +11,7 @@ from networkx.classes import Graph  # type: ignore
 
 from horao.conceptual.crdt import LastWriterWinsMap
 from horao.conceptual.decorators import instrument_class_function
+from horao.conceptual.support import Update
 from horao.physical.component import Disk
 from horao.physical.composite import Blade, Cabinet, Chassis, Server
 from horao.physical.computer import Computer
@@ -54,38 +55,12 @@ class DataCenter:
         self.name = name
         self.number = number
         self.listeners = listeners if listeners else []
-        self.rows = LastWriterWinsMap() if not rows else rows
+        self.rows = (
+            LastWriterWinsMap(listeners=[self.invoke_listeners]) if not rows else rows
+        )
         if items:
             for k, v in items.items():
                 self.rows.set(k, v, hash(k))  # type: ignore
-
-        def attach_change_listeners(c: Computer):
-            c.cpus.add_listeners(self.invoke_listeners)
-            c.rams.add_listeners(self.invoke_listeners)
-            c.disks.add_listeners(self.invoke_listeners)
-            c.nics.add_listeners(self.invoke_listeners)
-            c.accelerators.add_listeners(self.invoke_listeners)
-
-        for _, v in self.rows.read().items():
-            for cabinet in v:
-                cabinet.servers.add_listeners(self.invoke_listeners)
-                for server in cabinet.servers:
-                    attach_change_listeners(server)
-                cabinet.chassis.add_listeners(self.invoke_listeners)
-                for chassis in cabinet.chassis:
-                    chassis.servers.add_listeners(self.invoke_listeners)
-                    for server in chassis.servers:
-                        attach_change_listeners(server)
-                    chassis.blades.add_listeners(self.invoke_listeners)
-                    for blade in chassis.blades:
-                        blade.nodes.add_listeners(self.invoke_listeners)
-                        for node in blade.nodes:
-                            node.modules.add_listeners(self.invoke_listeners)
-                            for module in node.modules:
-                                attach_change_listeners(module)
-                cabinet.switches.add_listeners(self.invoke_listeners)
-                for switch in cabinet.switches:
-                    switch.ports.add_listeners(self.invoke_listeners)
 
     def add_listeners(self, listener: Callable) -> None:
         """
@@ -105,13 +80,13 @@ class DataCenter:
         if listener in self.listeners:
             self.listeners.remove(listener)
 
-    def invoke_listeners(self) -> None:
+    def invoke_listeners(self, update: Optional[Update] = None) -> None:
         """
-        Invokes all async event listeners.
+        Invokes all event listeners.
         :return: None
         """
         for listener in self.listeners:
-            asyncio.create_task(listener())
+            listener(update)
 
     def change_count(self) -> int:
         """
@@ -198,11 +173,16 @@ class DataCenter:
             for cabinet in v:
                 for server in cabinet.servers:
                     reset_server_counters(server)
+                cabinet.servers.reset_change_count()
                 for chassis in cabinet.chassis:
                     for blade in chassis.blades:
                         for node in blade.nodes:
                             for module in node.modules:
                                 reset_server_counters(module)
+                            node.modules.reset_change_count()
+                        blade.nodes.reset_change_count()
+                    chassis.blades.reset_change_count()
+                cabinet.chassis.reset_change_count()
                 cabinet.switches.reset_change_count()
             v.reset_change_count()
 
@@ -218,7 +198,7 @@ class DataCenter:
     def __getitem__(self, key) -> List[Cabinet]:
         for k, v in self.rows.read().items():
             if k == key:
-                return v.value
+                return v
         raise KeyError(f"Key {key} not found")
 
     @instrument_class_function(name="delitem", level=logging.DEBUG)

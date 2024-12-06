@@ -29,26 +29,70 @@ class Computer(ABC):
         self.name = name
         self.model = model
         self.number = number
-        self.cpus = HardwareList[CPU](
+        self._cpus = HardwareList[CPU](
             hardware=cpus if isinstance(cpus, list) else None,
             items=cpus if isinstance(cpus, HardwareList) else None,  # type: ignore
         )
-        self.rams = HardwareList[RAM](
+        self._rams = HardwareList[RAM](
             hardware=rams if isinstance(rams, list) else None,
             items=rams if isinstance(rams, HardwareList) else None,  # type: ignore
         )
-        self.nics = HardwareList[NIC](
+        self._nics = HardwareList[NIC](
             hardware=nics if isinstance(nics, list) else None,
             items=nics if isinstance(nics, HardwareList) else None,  # type: ignore
         )
-        self.disks = HardwareList[Disk](
+        self._disks = HardwareList[Disk](
             hardware=disks if isinstance(disks, list) else None,
             items=disks if isinstance(disks, HardwareList) else None,  # type: ignore
         )
-        self.accelerators = HardwareList[Accelerator](
+        self._accelerators = HardwareList[Accelerator](
             hardware=accelerators if isinstance(accelerators, list) else None,
             items=accelerators if isinstance(accelerators, HardwareList) else None,  # type: ignore
         )
+
+    def add_listener(self, listener):
+        if listener not in self._cpus.listeners:
+            self._cpus.add_listeners(listener)
+        if listener not in self._rams.listeners:
+            self._rams.add_listeners(listener)
+        if listener not in self._nics.listeners:
+            self._nics.add_listeners(listener)
+        if listener not in self._disks.listeners:
+            self._disks.add_listeners(listener)
+        if listener not in self._accelerators.listeners:
+            self._accelerators.add_listeners(listener)
+
+    def remove_listener(self, listener):
+        if listener in self._cpus.listeners:
+            self._cpus.remove_listeners(listener)
+        if listener in self._rams.listeners:
+            self._rams.remove_listeners(listener)
+        if listener in self._nics.listeners:
+            self._nics.remove_listeners(listener)
+        if listener in self._disks.listeners:
+            self._disks.remove_listeners(listener)
+        if listener in self._accelerators.listeners:
+            self._accelerators.remove_listeners(listener)
+
+    @property
+    def cpus(self) -> List[CPU]:
+        return list(iter(self._cpus))
+
+    @property
+    def rams(self) -> List[RAM]:
+        return list(iter(self._rams))
+
+    @property
+    def nics(self) -> List[NIC]:
+        return list(iter(self._nics))
+
+    @property
+    def disks(self) -> List[Disk]:
+        return list(iter(self._disks))
+
+    @property
+    def accelerators(self) -> List[Accelerator]:
+        return list(iter(self._accelerators))
 
     def change_count(self) -> int:
         """
@@ -56,11 +100,11 @@ class Computer(ABC):
         :return: int
         """
         return (
-            self.cpus.change_count()
-            + self.rams.change_count()
-            + self.nics.change_count()
-            + self.disks.change_count()
-            + self.accelerators.change_count()
+            self._cpus.change_count()
+            + self._rams.change_count()
+            + self._nics.change_count()
+            + self._disks.change_count()
+            + self._accelerators.change_count()
         )
 
     def __copy__(self):
@@ -69,11 +113,11 @@ class Computer(ABC):
             self.name,
             self.model,
             self.number,
-            list(iter(self.cpus)),
-            list(iter(self.rams)),
-            list(iter(self.nics)),
-            list(iter(self.disks)),
-            list(iter(self.accelerators)),
+            self.cpus,
+            self.rams,
+            self.nics,
+            self.disks,
+            self.accelerators,
         )
 
     def __eq__(self, other) -> bool:
@@ -130,11 +174,11 @@ class Server(Computer):
             self.name,
             self.model,
             self.number,
-            list(iter(self.cpus)),
-            list(iter(self.rams)),
-            list(iter(self.nics)),
-            list(iter(self.disks)),
-            list(iter(self.accelerators)),
+            self.cpus,
+            self.rams,
+            self.nics,
+            self.disks,
+            self.accelerators,
             self.status,
         )
 
