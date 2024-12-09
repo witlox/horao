@@ -43,6 +43,9 @@ SYNC_MAX=1000 #integer, default=1000; number of changes since last sync
 
 # Design assumptions
 
+## Change tracking
+There are various resources where changes are tracked when adding, moving or removing things from a datacenter. The current assumption is that higher order physical resources (reasonably static), are tracked, e.g. servers, switches, etc. Lower level resource changes are currently not tracked (like CPU, RAM, etc.), except hardware which is 'removable' like disks and blades.
+
 ## Reasonably 'static' resources
 
 There are various resources that are relatively static, such as physical devices. These resources are usually created once and then used for a long time. The management of these resources is usually done by a small group of people, and the changes are relatively infrequent.

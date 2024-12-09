@@ -2,7 +2,6 @@
 """Data Center composites"""
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -96,18 +95,21 @@ class DataCenter:
         total = 0
         for _, v in self.rows.read().items():
             for cabinet in v:
-                for server in cabinet.servers:
+                for server in cabinet._servers:
                     total += server.change_count()
-                for chassis in cabinet.chassis:
+                total += cabinet._servers.change_count()
+                for chassis in cabinet._chassis:
                     total += chassis.change_count()
-                    for blade in chassis.blades:
+                    for blade in chassis._blades:
                         total += blade.change_count()
-                        for node in blade.nodes:
+                        for node in blade._nodes:
                             total += node.change_count()
-                            for module in node.modules:
+                            for module in node._modules:
                                 total += module.change_count()
-                for switch in cabinet.switches:
-                    total += switch.change_count()
+                            total += node._modules.change_count()
+                    total += chassis._blades.change_count()
+                total += cabinet._chassis.change_count()
+                total += cabinet._switches.change_count()
         return total
 
     @instrument_class_function(name="copy", level=logging.DEBUG)
@@ -162,23 +164,16 @@ class DataCenter:
                 self[number] = row
 
         # reset change counters
-        def reset_server_counters(s: Server):
-            s.cpus.reset_change_count()
-            s.rams.reset_change_count()
-            s.disks.reset_change_count()
-            s.nics.reset_change_count()
-            s.accelerators.reset_change_count()
-
         for _, v in self.rows.read().items():
             for cabinet in v:
                 for server in cabinet.servers:
-                    reset_server_counters(server)
+                    server._disks.reset_change_count()
                 cabinet.servers.reset_change_count()
                 for chassis in cabinet.chassis:
                     for blade in chassis.blades:
                         for node in blade.nodes:
                             for module in node.modules:
-                                reset_server_counters(module)
+                                module._disks.reset_change_count()
                             node.modules.reset_change_count()
                         blade.nodes.reset_change_count()
                     chassis.blades.reset_change_count()

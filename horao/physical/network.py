@@ -125,9 +125,6 @@ class NetworkDevice(Hardware):
     def ports(self) -> List[Port]:
         return list(iter(self._ports))
 
-    def change_count(self) -> int:
-        return self._ports.change_count()
-
     def __eq__(self, other) -> bool:
         if not isinstance(other, NetworkDevice):
             return False
@@ -186,9 +183,6 @@ class Firewall(NetworkDevice):
     def wan_ports(self) -> List[Port]:
         return list(iter(self._wan_ports))
 
-    def change_count(self) -> int:
-        return super().change_count() + self._wan_ports.change_count()
-
     def __eq__(self, other):
         if not isinstance(other, Firewall):
             return False
@@ -228,9 +222,6 @@ class Router(NetworkDevice):
     @property
     def wan_ports(self) -> List[Port]:
         return list(iter(self._wan_ports))
-
-    def change_count(self) -> int:
-        return super().change_count() + self._wan_ports.change_count()
 
     def __eq__(self, other):
         if not isinstance(other, Router):
@@ -276,9 +267,6 @@ class Switch(NetworkDevice):
     @property
     def uplink_ports(self) -> List[Port]:
         return list(iter(self._uplink_ports))
-
-    def change_count(self) -> int:
-        return super().change_count() + self._uplink_ports.change_count()
 
     def __eq__(self, other):
         if not isinstance(other, Switch):

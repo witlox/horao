@@ -79,7 +79,6 @@ class HoraoEncoder(json.JSONEncoder):
                 "removed": json.dumps(obj.removed, cls=HoraoEncoder),
                 "removed_metadata": json.dumps(obj.removed_metadata, cls=HoraoEncoder),
                 "clock": json.dumps(obj.clock, cls=HoraoEncoder),
-                "listeners": json.dumps(obj.listeners, cls=HoraoEncoder),
             }
         if isinstance(obj, LastWriterWinsRegister):
             return {
@@ -89,11 +88,6 @@ class HoraoEncoder(json.JSONEncoder):
                 "clock": json.dumps(obj.clock, cls=HoraoEncoder) if obj.clock else None,
                 "last_update": obj.last_update,
                 "last_writer": obj.last_writer,
-                "listeners": (
-                    json.dumps(obj.listeners, cls=HoraoEncoder)
-                    if obj.listeners
-                    else None
-                ),
             }
         if isinstance(obj, LastWriterWinsMap):
             return {
@@ -105,11 +99,6 @@ class HoraoEncoder(json.JSONEncoder):
                     else None
                 ),
                 "clock": json.dumps(obj.clock, cls=HoraoEncoder) if obj.clock else None,
-                "listeners": (
-                    json.dumps(obj.listeners, cls=HoraoEncoder)
-                    if obj.listeners
-                    else None
-                ),
             }
         if isinstance(obj, Port):
             return {
@@ -447,11 +436,6 @@ class HoraoDecoder(json.JSONDecoder):
                 clock=(
                     json.loads(obj["clock"], cls=HoraoDecoder) if obj["clock"] else None
                 ),
-                listeners=(
-                    json.loads(obj["listeners"], cls=HoraoDecoder)
-                    if obj["listeners"]
-                    else None
-                ),
             )
         if "type" in obj and obj["type"] == "LastWriterWinsRegister":
             return LastWriterWinsRegister(
@@ -464,11 +448,6 @@ class HoraoDecoder(json.JSONDecoder):
                 ),
                 last_update=obj["last_update"] if obj["last_update"] else None,
                 last_writer=obj["last_writer"] if obj["last_writer"] else None,
-                listeners=(
-                    json.loads(obj["listeners"], cls=HoraoDecoder)
-                    if obj["listeners"]
-                    else None
-                ),
             )
         if "type" in obj and obj["type"] == "LastWriterWinsMap":
             return LastWriterWinsMap(
@@ -482,11 +461,6 @@ class HoraoDecoder(json.JSONDecoder):
                 ),
                 clock=(
                     json.loads(obj["clock"], cls=HoraoDecoder) if obj["clock"] else None
-                ),
-                listeners=(
-                    json.loads(obj["listeners"], cls=HoraoDecoder)
-                    if obj["listeners"]
-                    else None
                 ),
             )
         if "type" in obj and obj["type"] == "Port":

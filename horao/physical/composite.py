@@ -24,20 +24,9 @@ class Node(Hardware):
         self.name = name
         self._modules = ComputerList[Module](modules)
 
-    def add_listener(self, listener):
-        if listener not in self._modules.listeners:
-            self._modules.add_listeners(listener)
-
-    def remove_listener(self, listener):
-        if listener in self._modules.listeners:
-            self._modules.remove_listeners(listener)
-
     @property
     def modules(self):
         return list(iter(self._modules))
-
-    def change_count(self) -> int:
-        return self._modules.change_count()
 
     def __copy__(self):
         return Node(

@@ -4,7 +4,7 @@ import pytest
 
 from horao.controllers.synchronization import SynchronizePeers
 from horao.logical.infrastructure import LogicalInfrastructure
-from horao.physical.network import Port
+from horao.physical.computer import Server
 from horao.physical.status import DeviceStatus
 from tests.helpers import initialize_logical_infrastructure
 
@@ -22,10 +22,10 @@ async def test_backpressure_timed(mocker):
     infrastructure = LogicalInfrastructure(infrastructure={dc: [dcn]})
     sync_peers = SynchronizePeers(infrastructure)
     spy = mocker.spy(sync_peers, "synchronize")
-    assert dc.change_count() == 0
+    assert dc.change_count() == 15
     assert spy.call_count == 0
-    dc[1][0].switches[0].ports.append(
-        Port("ser4", "lp", 3, "m4", DeviceStatus.Down, False, 100)
+    dc[1][0].servers.append(
+        Server("123", "foo", "42", 42, [], [], [], [], [], DeviceStatus.Up)
     )
-    assert dc.change_count() == 1
+    assert dc.change_count() == 16
     assert spy.call_count == 1

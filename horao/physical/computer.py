@@ -51,28 +51,12 @@ class Computer(ABC):
         )
 
     def add_listener(self, listener):
-        if listener not in self._cpus.listeners:
-            self._cpus.add_listeners(listener)
-        if listener not in self._rams.listeners:
-            self._rams.add_listeners(listener)
-        if listener not in self._nics.listeners:
-            self._nics.add_listeners(listener)
         if listener not in self._disks.listeners:
             self._disks.add_listeners(listener)
-        if listener not in self._accelerators.listeners:
-            self._accelerators.add_listeners(listener)
 
     def remove_listener(self, listener):
-        if listener in self._cpus.listeners:
-            self._cpus.remove_listeners(listener)
-        if listener in self._rams.listeners:
-            self._rams.remove_listeners(listener)
-        if listener in self._nics.listeners:
-            self._nics.remove_listeners(listener)
         if listener in self._disks.listeners:
             self._disks.remove_listeners(listener)
-        if listener in self._accelerators.listeners:
-            self._accelerators.remove_listeners(listener)
 
     @property
     def cpus(self) -> List[CPU]:
