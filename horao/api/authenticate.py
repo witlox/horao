@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-#
 import os
 
 from authlib.integrations.starlette_client import OAuth  # type: ignore
@@ -6,6 +7,13 @@ from starlette.responses import RedirectResponse
 
 
 async def login(request: Request):
+    """
+    responses:
+      401:
+        description: Not authorized
+      302:
+        description: Redirect after successful login
+    """
     redirect_uri = request.url_for("auth")
     oauth_role_uri = os.getenv("OAUTH_ROLE_URI", "role")
     oauth_settings = {
@@ -31,5 +39,10 @@ async def login(request: Request):
 
 
 async def logout(request: Request):
+    """
+    responses:
+        302:
+            description: Redirect after successful logout
+    """
     request.session.pop("user", None)
     return RedirectResponse(url="/")

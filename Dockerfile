@@ -15,4 +15,4 @@ COPY . /code
 EXPOSE 8080
 
 ENTRYPOINT [ "gunicorn" ]
-CMD ["-b", "0.0.0.0:8080", "horao:init_api", "-k", "uvicorn.workers.UvicornWorker"]
+CMD ["-b", "0.0.0.0:8080", "horao:init", "-k", "uvicorn.workers.UvicornWorker"]

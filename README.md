@@ -29,7 +29,7 @@ The command line way:
 6. Install the required packages (`poetry install`)
 4. Run the project
   a. `poetry run python horao/main.py`
-  b. `poetry run gunicorn horao:init_api -k uvicorn.workers.UvicornWorker --reload`
+  b. `poetry run gunicorn horao:init -k uvicorn.workers.UvicornWorker --reload`
 ```
 
 The docker way, either use the `devcontainer` or run with `docker-compose`:
