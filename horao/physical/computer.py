@@ -29,66 +29,25 @@ class Computer(ABC):
         self.name = name
         self.model = model
         self.number = number
-        self._cpus = HardwareList[CPU](
+        self.cpus = HardwareList[CPU](
             hardware=cpus if isinstance(cpus, list) else None,
             items=cpus if isinstance(cpus, HardwareList) else None,  # type: ignore
         )
-        self._rams = HardwareList[RAM](
+        self.rams = HardwareList[RAM](
             hardware=rams if isinstance(rams, list) else None,
             items=rams if isinstance(rams, HardwareList) else None,  # type: ignore
         )
-        self._nics = HardwareList[NIC](
+        self.nics = HardwareList[NIC](
             hardware=nics if isinstance(nics, list) else None,
             items=nics if isinstance(nics, HardwareList) else None,  # type: ignore
         )
-        self._disks = HardwareList[Disk](
+        self.disks = HardwareList[Disk](
             hardware=disks if isinstance(disks, list) else None,
             items=disks if isinstance(disks, HardwareList) else None,  # type: ignore
         )
-        self._accelerators = HardwareList[Accelerator](
+        self.accelerators = HardwareList[Accelerator](
             hardware=accelerators if isinstance(accelerators, list) else None,
             items=accelerators if isinstance(accelerators, HardwareList) else None,  # type: ignore
-        )
-
-    def add_listener(self, listener):
-        if listener not in self._disks.listeners:
-            self._disks.add_listeners(listener)
-
-    def remove_listener(self, listener):
-        if listener in self._disks.listeners:
-            self._disks.remove_listeners(listener)
-
-    @property
-    def cpus(self) -> List[CPU]:
-        return list(iter(self._cpus))
-
-    @property
-    def rams(self) -> List[RAM]:
-        return list(iter(self._rams))
-
-    @property
-    def nics(self) -> List[NIC]:
-        return list(iter(self._nics))
-
-    @property
-    def disks(self) -> List[Disk]:
-        return list(iter(self._disks))
-
-    @property
-    def accelerators(self) -> List[Accelerator]:
-        return list(iter(self._accelerators))
-
-    def change_count(self) -> int:
-        """
-        Return the number of changes in the stack
-        :return: int
-        """
-        return (
-            self._cpus.change_count()
-            + self._rams.change_count()
-            + self._nics.change_count()
-            + self._disks.change_count()
-            + self._accelerators.change_count()
         )
 
     def __copy__(self):

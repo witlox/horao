@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple, Any
 
 from horao.conceptual.claim import Claim, Reservation
 from horao.conceptual.decorators import instrument_class_function
@@ -38,12 +38,12 @@ class LogicalInfrastructure:
         self.constraints = constraints or {}
         self.claims = claims or {}
 
-    def change_count(self) -> int:
+    def changes(self) -> List[Any]:
         """
         Count the number of changes in the infrastructure.
         :return: number of changes
         """
-        return sum([d.change_count() for d in self.infrastructure.keys()])
+        return [d.changes for d in self.infrastructure.keys()]
 
     def clear(self) -> None:
         self.infrastructure.clear()

@@ -39,8 +39,8 @@ def test_direct_encode_decode_lists():
 async def test_storing_loading_logical_clock():
     clock = LogicalClock()
     store = Store(None)
-    await store.save("clock", clock)
-    loaded_clock = await store.load("clock")
+    await store.async_save("clock", clock)
+    loaded_clock = await store.async_load("clock")
     assert clock == loaded_clock
 
 
@@ -50,8 +50,8 @@ async def test_storing_loading_observed_removed_set():
     observed_removed_set.add("foo")
     observed_removed_set.add("bar")
     store = Store(None)
-    await store.save("observed_removed_set", observed_removed_set)
-    loaded_observed_removed_set = await store.load("observed_removed_set")
+    await store.async_save("observed_removed_set", observed_removed_set)
+    loaded_observed_removed_set = await store.async_load("observed_removed_set")
     assert observed_removed_set == loaded_observed_removed_set
 
 
@@ -62,8 +62,8 @@ async def test_storing_loading_last_writer_wins_register():
     lww_register.update(update)
 
     store = Store(None)
-    await store.save("lww_register", lww_register)
-    loaded_lww_register = await store.load("lww_register")
+    await store.async_save("lww_register", lww_register)
+    loaded_lww_register = await store.async_load("lww_register")
     assert lww_register == loaded_lww_register
 
 
@@ -74,8 +74,8 @@ async def test_storing_loading_last_writer_wins_map():
     value = "bar"
     lww_map.set(name, value, 1)
     store = Store(None)
-    await store.save("lww_map", lww_map)
-    loaded_lww_map = await store.load("lww_map")
+    await store.async_save("lww_map", lww_map)
+    loaded_lww_map = await store.async_load("lww_map")
     assert lww_map == loaded_lww_map
 
 
@@ -104,8 +104,8 @@ async def test_storing_loading_switch():
         uplink_ports=[],
     )
     store = Store(None)
-    await store.save("switch", switch)
-    loaded_switch = await store.load("switch")
+    await store.async_save("switch", switch)
+    loaded_switch = await store.async_load("switch")
     assert switch == loaded_switch
 
 
@@ -158,8 +158,8 @@ async def test_storing_loading_server():
         status=DeviceStatus.Up,
     )
     store = Store(None)
-    await store.save("server", server)
-    loaded_server = await store.load("server")
+    await store.async_save("server", server)
+    loaded_server = await store.async_load("server")
     assert server == loaded_server
 
 
@@ -177,8 +177,8 @@ async def test_storing_loading_list():
         )
     )
     store = Store(None)
-    await store.save("list", l)
-    loaded_list = await store.load("list")
+    await store.async_save("list", l)
+    loaded_list = await store.async_load("list")
     assert list(l) == loaded_list
 
 
@@ -187,6 +187,6 @@ async def test_storing_loading_logical_infrastructure():
     dc, dcn = initialize_logical_infrastructure()
     infrastructure = LogicalInfrastructure({dc: [dcn]})
     store = Store(None)
-    await store.save("infrastructure", infrastructure)
-    loaded_infrastructure = await store.load("infrastructure")
+    await store.async_save("infrastructure", infrastructure)
+    loaded_infrastructure = await store.async_load("infrastructure")
     assert infrastructure == loaded_infrastructure

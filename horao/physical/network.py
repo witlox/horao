@@ -117,13 +117,9 @@ class NetworkDevice(Hardware):
         self, serial_number, model, number, ports: List[Port] | HardwareList[Port]
     ):
         super().__init__(serial_number, model, number)
-        self._ports = (
+        self.ports = (
             ports if isinstance(ports, HardwareList) else HardwareList[Port](ports)
         )
-
-    @property
-    def ports(self) -> List[Port]:
-        return list(iter(self._ports))
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, NetworkDevice):
@@ -173,15 +169,11 @@ class Firewall(NetworkDevice):
         super().__init__(serial_number, model, number, lan_ports)
         self.name = name
         self.status = status
-        self._wan_ports = (
+        self.wan_ports = (
             wan_ports
             if isinstance(wan_ports, HardwareList)
             else HardwareList[Port](wan_ports)
         )
-
-    @property
-    def wan_ports(self) -> List[Port]:
-        return list(iter(self._wan_ports))
 
     def __eq__(self, other):
         if not isinstance(other, Firewall):
@@ -213,15 +205,11 @@ class Router(NetworkDevice):
         self.name = name
         self.router_type = router_type
         self.status = status
-        self._wan_ports = (
+        self.wan_ports = (
             wan_ports
             if isinstance(wan_ports, HardwareList)
             else HardwareList[Port](wan_ports)
         )
-
-    @property
-    def wan_ports(self) -> List[Port]:
-        return list(iter(self._wan_ports))
 
     def __eq__(self, other):
         if not isinstance(other, Router):
@@ -258,15 +246,11 @@ class Switch(NetworkDevice):
         self.switch_type = switch_type
         self.status = status
         self.managed = managed
-        self._uplink_ports = (
+        self.uplink_ports = (
             uplink_ports
             if isinstance(uplink_ports, HardwareList)
             else HardwareList[Port](uplink_ports)
         )
-
-    @property
-    def uplink_ports(self) -> List[Port]:
-        return list(iter(self._uplink_ports))
 
     def __eq__(self, other):
         if not isinstance(other, Switch):

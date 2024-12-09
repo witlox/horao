@@ -11,8 +11,7 @@ from networkx.classes import Graph  # type: ignore
 from horao.conceptual.crdt import LastWriterWinsMap
 from horao.conceptual.decorators import instrument_class_function
 from horao.conceptual.support import Update
-from horao.physical.component import Disk
-from horao.physical.composite import Blade, Cabinet, Chassis, Server
+from horao.physical.composite import Cabinet
 from horao.physical.computer import Computer
 from horao.physical.network import (
     NIC,
@@ -60,6 +59,7 @@ class DataCenter:
         if items:
             for k, v in items.items():
                 self.rows.set(k, v, hash(k))  # type: ignore
+        self.changes: List[Update] = []
 
     def add_listeners(self, listener: Callable) -> None:
         """
@@ -73,44 +73,25 @@ class DataCenter:
     def remove_listeners(self, listener: Callable) -> None:
         """
         Removes a listener if it was previously added.
-        :param listener: Callable[[Update], None]
+        :param listener: Callable
         :return: None
         """
         if listener in self.listeners:
             self.listeners.remove(listener)
 
-    def invoke_listeners(self, update: Optional[Update] = None) -> None:
+    def invoke_listeners(self, changes: Optional[List] = None) -> None:
         """
         Invokes all event listeners.
+        :param changes: list of changes
         :return: None
         """
+        if changes:
+            if isinstance(changes, List):
+                self.changes.extend(changes)
+            else:
+                self.changes.append(changes)
         for listener in self.listeners:
-            listener(update)
-
-    def change_count(self) -> int:
-        """
-        Sum the change count of all components in the data center
-        :return: int
-        """
-        total = 0
-        for _, v in self.rows.read().items():
-            for cabinet in v:
-                for server in cabinet._servers:
-                    total += server.change_count()
-                total += cabinet._servers.change_count()
-                for chassis in cabinet._chassis:
-                    total += chassis.change_count()
-                    for blade in chassis._blades:
-                        total += blade.change_count()
-                        for node in blade._nodes:
-                            total += node.change_count()
-                            for module in node._modules:
-                                total += module.change_count()
-                            total += node._modules.change_count()
-                    total += chassis._blades.change_count()
-                total += cabinet._chassis.change_count()
-                total += cabinet._switches.change_count()
-        return total
+            listener(changes)
 
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:
@@ -127,7 +108,9 @@ class DataCenter:
         return False
 
     def update(self, key: int, value: List[Cabinet]) -> None:
-        self.rows.set(key, value, hash(key))  # type: ignore
+        if key in self.keys():
+            self.__delitem__(key)
+        self.__setitem__(key, value, hash(key))  # type: ignore
 
     def keys(self) -> List[int]:
         return [k for k, _ in self.rows.read()]
@@ -163,23 +146,22 @@ class DataCenter:
             else:
                 self[number] = row
 
-        # reset change counters
+        # clear the change history
         for _, v in self.rows.read().items():
             for cabinet in v:
                 for server in cabinet.servers:
-                    server._disks.reset_change_count()
-                cabinet.servers.reset_change_count()
+                    server.disks.clear_history()
+                cabinet.servers.clear_history()
                 for chassis in cabinet.chassis:
                     for blade in chassis.blades:
                         for node in blade.nodes:
                             for module in node.modules:
-                                module._disks.reset_change_count()
-                            node.modules.reset_change_count()
-                        blade.nodes.reset_change_count()
-                    chassis.blades.reset_change_count()
-                cabinet.chassis.reset_change_count()
-                cabinet.switches.reset_change_count()
-            v.reset_change_count()
+                                module.disks.clear_history()
+                            node.modules.clear_history()
+                        blade.nodes.clear_history()
+                    chassis.blades.clear_history()
+                cabinet.chassis.clear_history()
+                cabinet.switches.clear_history()
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, DataCenter):
@@ -187,6 +169,22 @@ class DataCenter:
         return self.name == other.name
 
     def __setitem__(self, key: int, item: List[Cabinet]) -> None:
+        # glue all handlers to event invocation
+        for cabinet in item:
+            for server in cabinet.servers:
+                server.disks.add_listeners(self.invoke_listeners)
+            cabinet.servers.add_listeners(self.invoke_listeners)
+            for chassis in cabinet.chassis:
+                for blade in chassis.blades:
+                    for node in blade.nodes:
+                        for module in node.modules:
+                            module.disks.add_listeners(self.invoke_listeners)
+                        node.modules.add_listeners(self.invoke_listeners)
+                    blade.nodes.add_listeners(self.invoke_listeners)
+                chassis.blades.add_listeners(self.invoke_listeners)
+            cabinet.chassis.add_listeners(self.invoke_listeners)
+            cabinet.switches.add_listeners(self.invoke_listeners)
+        # insert the row
         self.rows.set(key, item, hash(key))  # type: ignore
 
     @instrument_class_function(name="getitem", level=logging.DEBUG)
@@ -200,6 +198,22 @@ class DataCenter:
     def __delitem__(self, key) -> None:
         for k, v in self.rows.read().items():
             if k == key:
+                # remove all listeners
+                for cabinet in v:
+                    for server in cabinet.servers:
+                        server.disks.remove_listeners(self.invoke_listeners)
+                    cabinet.servers.remove_listeners(self.invoke_listeners)
+                    for chassis in cabinet.chassis:
+                        for blade in chassis.blades:
+                            for node in blade.nodes:
+                                for module in node.modules:
+                                    module.disks.remove_listeners(self.invoke_listeners)
+                                node.modules.remove_listeners(self.invoke_listeners)
+                            blade.nodes.remove_listeners(self.invoke_listeners)
+                        chassis.blades.remove_listeners(self.invoke_listeners)
+                    cabinet.chassis.remove_listeners(self.invoke_listeners)
+                    cabinet.switches.remove_listeners(self.invoke_listeners)
+                # remove the row
                 self.rows.unset(key, hash(key))
                 return
         raise KeyError(f"Key {key} not found")
@@ -222,76 +236,6 @@ class DataCenter:
 
     def __hash__(self) -> int:
         return hash((self.name, self.number))
-
-    @staticmethod
-    @instrument_class_function(name="move_server", level=logging.DEBUG)
-    def move_server(server: Server, from_cabinet: Cabinet, to_cabinet: Cabinet) -> None:
-        """
-        Move a server from one cabinet to another
-        :param server: server to move
-        :param from_cabinet: from
-        :param to_cabinet: to
-        :return: None
-        :raises: ValueError if you try to remove a server that doesn't exist
-        """
-        if not server in from_cabinet.servers:
-            raise ValueError("Cannot move servers that are not installed.")
-        from_cabinet.servers.remove(server)
-        to_cabinet.servers.append(server)
-
-    @staticmethod
-    @instrument_class_function(name="move_chassis", level=logging.DEBUG)
-    def move_chassis_server(
-        server: Server, from_chassis: Chassis, to_chassis: Chassis
-    ) -> None:
-        """
-        Move a server from one cabinet to another
-        :param server: server to move
-        :param from_chassis: from
-        :param to_chassis: to
-        :return: None
-        :raises: ValueError if you try to remove a server that doesn't exist
-        """
-        if not server in from_chassis.servers:
-            raise ValueError("Cannot move servers that are not installed.")
-        from_chassis.servers.remove(server)
-        to_chassis.servers.append(server)
-
-    @staticmethod
-    @instrument_class_function(name="move_blade", level=logging.DEBUG)
-    def move_blade(blade: Blade, from_chassis: Chassis, to_chassis: Chassis) -> None:
-        """
-        Move a server from one chassis to another
-        :param blade: blade to move
-        :param from_chassis: from
-        :param to_chassis: to
-        :return: None
-        :raises: ValueError if you try to remove a blade that is not installed
-        """
-        if not blade in from_chassis.blades:
-            raise ValueError("Cannot move blades that are not installed.")
-        from_chassis.blades.remove(blade)
-        to_chassis.blades.append(blade)
-
-    @staticmethod
-    @instrument_class_function(name="swap_disk", level=logging.DEBUG)
-    def swap_disk(
-        server: Server, old_disk: Optional[Disk], new_disk: Optional[Disk]
-    ) -> None:
-        """
-        Swap a (broken) disk in a server
-        :param server: server to swap disk from/in
-        :param old_disk: old disk to remove (if any)
-        :param new_disk: new disk to add (if any)
-        :return: None
-        :raises: ValueError if you try to remove a disk that doesn't exist
-        """
-        if new_disk is not None:
-            server.disks.append(new_disk)
-        if old_disk:
-            if not server.disks:
-                raise ValueError("Cannot remove disks that are not installed.")
-            server.disks.remove(old_disk)
 
     def fetch_server_nic(
         self, row: int, cabinet: int, server: int, nic: int, chassis: Optional[int]

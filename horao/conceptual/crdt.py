@@ -764,11 +764,9 @@ class CRDTList(List[T]):
         super().__init__()
         self.log = logging.getLogger(__name__)
         self.listeners = listeners if listeners else []
-        self._change_count = 0
+        self.changes: List[Update] = []
         self.items = (
-            LastWriterWinsMap(listeners=[self.increase_change_count])
-            if not items
-            else items
+            LastWriterWinsMap(listeners=[self.invoke_listeners]) if not items else items
         )
         if content:
             self.extend(content)
@@ -797,31 +795,17 @@ class CRDTList(List[T]):
         Invokes all event listeners.
         :return: None
         """
+        if update and not update in self.changes:
+            self.changes.append(update)
         for listener in self.listeners:
-            listener(update)
+            listener(self.changes)
 
-    def increase_change_count(self, update: Optional[Update] = None) -> None:
+    def clear_history(self) -> None:
         """
-        Increase the change count.
-        :param update: change to process
+        Clear the history of changes.
         :return: None
         """
-        self._change_count += 1
-        self.invoke_listeners(update)
-
-    def change_count(self) -> int:
-        """
-        Return the number of changes.
-        :return: int
-        """
-        return self._change_count
-
-    def reset_change_count(self) -> None:
-        """
-        Reset the change count.
-        :return: None
-        """
-        self._change_count = 0
+        self.changes.clear()
 
     @instrument_class_function(name="append", level=logging.DEBUG)
     def append(self, item: T) -> T:

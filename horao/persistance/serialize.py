@@ -9,7 +9,6 @@ from networkx.convert import from_dict_of_dicts, to_dict_of_dicts  # type: ignor
 from horao.auth.roles import TenantController
 from horao.conceptual.claim import Reservation
 from horao.conceptual.crdt import (
-    CRDTList,
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
@@ -22,8 +21,7 @@ from horao.logical.infrastructure import LogicalInfrastructure
 from horao.logical.resource import Compute, Storage
 from horao.physical.component import CPU, RAM, Accelerator, Disk
 from horao.physical.composite import Blade, Cabinet, Chassis, Node
-from horao.physical.computer import ComputerList, Module, Server
-from horao.physical.hardware import HardwareList
+from horao.physical.computer import Module, Server
 from horao.physical.network import (
     NIC,
     Firewall,
@@ -117,7 +115,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "serial_number": obj.serial_number,
                 "model": obj.model,
                 "number": obj.number,
-                "ports": json.dumps(obj._ports, cls=HoraoEncoder),
+                "ports": json.dumps(obj.ports, cls=HoraoEncoder),
             }
         if isinstance(obj, Switch):
             return {
@@ -130,10 +128,10 @@ class HoraoEncoder(json.JSONEncoder):
                 "switch_type": obj.switch_type.value,
                 "status": obj.status.value,
                 "managed": obj.managed,
-                "lan_ports": json.dumps(obj._ports, cls=HoraoEncoder),
+                "lan_ports": json.dumps(obj.ports, cls=HoraoEncoder),
                 "uplink_ports": (
-                    json.dumps(obj._uplink_ports, cls=HoraoEncoder)
-                    if obj._uplink_ports
+                    json.dumps(obj.uplink_ports, cls=HoraoEncoder)
+                    if obj.uplink_ports
                     else None
                 ),
             }
@@ -146,10 +144,10 @@ class HoraoEncoder(json.JSONEncoder):
                 "number": obj.number,
                 "router_type": obj.router_type.value,
                 "status": obj.status.value,
-                "lan_ports": json.dumps(obj._ports, cls=HoraoEncoder),
+                "lan_ports": json.dumps(obj.ports, cls=HoraoEncoder),
                 "wan_ports": (
-                    json.dumps(obj._wan_ports, cls=HoraoEncoder)
-                    if obj._wan_ports
+                    json.dumps(obj.wan_ports, cls=HoraoEncoder)
+                    if obj.wan_ports
                     else None
                 ),
             }
@@ -161,10 +159,10 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "status": obj.status.value,
-                "lan_ports": json.dumps(obj._ports, cls=HoraoEncoder),
+                "lan_ports": json.dumps(obj.ports, cls=HoraoEncoder),
                 "wan_ports": (
-                    json.dumps(obj._wan_ports, cls=HoraoEncoder)
-                    if obj._wan_ports
+                    json.dumps(obj.wan_ports, cls=HoraoEncoder)
+                    if obj.wan_ports
                     else None
                 ),
             }
@@ -212,15 +210,15 @@ class HoraoEncoder(json.JSONEncoder):
                 "name": obj.name,
                 "model": obj.model,
                 "number": obj.number,
-                "cpus": json.dumps(obj._cpus, cls=HoraoEncoder),
-                "rams": json.dumps(obj._rams, cls=HoraoEncoder),
-                "nics": json.dumps(obj._nics, cls=HoraoEncoder),
+                "cpus": json.dumps(obj.cpus, cls=HoraoEncoder),
+                "rams": json.dumps(obj.rams, cls=HoraoEncoder),
+                "nics": json.dumps(obj.nics, cls=HoraoEncoder),
                 "disks": (
-                    json.dumps(obj._disks, cls=HoraoEncoder) if obj._disks else None
+                    json.dumps(obj.disks, cls=HoraoEncoder) if obj.disks else None
                 ),
                 "accelerators": (
-                    json.dumps(obj._accelerators, cls=HoraoEncoder)
-                    if obj._accelerators
+                    json.dumps(obj.accelerators, cls=HoraoEncoder)
+                    if obj.accelerators
                     else None
                 ),
                 "status": obj.status.value,
@@ -232,15 +230,15 @@ class HoraoEncoder(json.JSONEncoder):
                 "name": obj.name,
                 "model": obj.model,
                 "number": obj.number,
-                "cpus": json.dumps(obj._cpus, cls=HoraoEncoder),
-                "rams": json.dumps(obj._rams, cls=HoraoEncoder),
-                "nics": json.dumps(obj._nics, cls=HoraoEncoder),
+                "cpus": json.dumps(obj.cpus, cls=HoraoEncoder),
+                "rams": json.dumps(obj.rams, cls=HoraoEncoder),
+                "nics": json.dumps(obj.nics, cls=HoraoEncoder),
                 "disks": (
-                    json.dumps(obj._disks, cls=HoraoEncoder) if obj._disks else None
+                    json.dumps(obj.disks, cls=HoraoEncoder) if obj.disks else None
                 ),
                 "accelerators": (
-                    json.dumps(obj._accelerators, cls=HoraoEncoder)
-                    if obj._accelerators
+                    json.dumps(obj.accelerators, cls=HoraoEncoder)
+                    if obj.accelerators
                     else None
                 ),
                 "status": obj.status.value,
@@ -253,7 +251,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "modules": (
-                    json.dumps(obj._modules, cls=HoraoEncoder) if obj._modules else None
+                    json.dumps(obj.modules, cls=HoraoEncoder) if obj.modules else None
                 ),
             }
         if isinstance(obj, Blade):
@@ -264,7 +262,7 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "nodes": (
-                    json.dumps(obj._nodes, cls=HoraoEncoder) if obj._nodes else None
+                    json.dumps(obj.nodes, cls=HoraoEncoder) if obj.nodes else None
                 ),
             }
         if isinstance(obj, Chassis):
@@ -275,10 +273,10 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "servers": (
-                    json.dumps(obj._servers, cls=HoraoEncoder) if obj._servers else None
+                    json.dumps(obj.servers, cls=HoraoEncoder) if obj.servers else None
                 ),
                 "blades": (
-                    json.dumps(obj._blades, cls=HoraoEncoder) if obj._blades else None
+                    json.dumps(obj.blades, cls=HoraoEncoder) if obj.blades else None
                 ),
             }
         if isinstance(obj, Cabinet):
@@ -289,15 +287,13 @@ class HoraoEncoder(json.JSONEncoder):
                 "model": obj.model,
                 "number": obj.number,
                 "servers": (
-                    json.dumps(obj._servers, cls=HoraoEncoder) if obj._servers else None
+                    json.dumps(obj.servers, cls=HoraoEncoder) if obj.servers else None
                 ),
                 "chassis": (
-                    json.dumps(obj._chassis, cls=HoraoEncoder) if obj._chassis else None
+                    json.dumps(obj.chassis, cls=HoraoEncoder) if obj.chassis else None
                 ),
                 "switches": (
-                    json.dumps(obj._switches, cls=HoraoEncoder)
-                    if obj._switches
-                    else None
+                    json.dumps(obj.switches, cls=HoraoEncoder) if obj.switches else None
                 ),
             }
         if isinstance(obj, DataCenter):

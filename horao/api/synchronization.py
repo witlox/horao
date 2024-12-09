@@ -47,23 +47,23 @@ async def synchronize(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "Error parsing request"})
     try:
         session = init_session()
-        for k, v in logical_infrastructure.logical_infrastructure.items():
-            local_dc = await session.load(k.name)
+        for k, v in logical_infrastructure.infrastructure.items():
+            local_dc = await session.async_load(k.name)
             if not local_dc:
-                await session.save(k.name, k)
+                await session.async_save(k.name, k)
             else:
                 local_dc.merge(k)
-            local_dc_content = await session.load(f"{k.name}.content")
+            local_dc_content = await session.async_load(f"{k.name}.content")
             if not local_dc_content:
-                await session.save(f"{k.name}.content", v)
+                await session.async_save(f"{k.name}.content", v)
             else:
                 local_dc_content.merge(v)
         if logical_infrastructure.claims:
             for k, v in logical_infrastructure.claims.items():
-                await session.save(k.name, k)
+                await session.async_save(k.name, k)
         if logical_infrastructure.constraints:
             for k, v in logical_infrastructure.contraints.items():
-                await session.save(k.name, k)
+                await session.async_save(k.name, k)
     except Exception as e:
         logging.error(f"Error synchronizing: {e}")
         if os.getenv("DEBUG", "False") == "True":

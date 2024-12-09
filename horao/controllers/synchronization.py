@@ -6,7 +6,6 @@ There are 2 mechanisms for synchronization:
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
@@ -54,7 +53,7 @@ class SynchronizePeers:
         for dc in self.logical_infrastructure.infrastructure.keys():
             dc.add_listeners(self.synchronize)
 
-    def synchronize(self) -> None:
+    def synchronize(self, changes: Optional[List] = None) -> None:
         """
         Synchronize with all peers, if one of the following conditions is met:
         - there was no previous synchronization time stamp.
@@ -62,18 +61,19 @@ class SynchronizePeers:
         - the amount of changes on the stack exceed the threshold that was set
         will only call synchronize if there are any changes if the timer expires
         note: currently only the infrastructure is tracked, changes to claims and constraints are not tracked
+        :param changes: optional list of changes
         :return: None
         """
         if not self.peers:
             return None
         timedelta_exceeded = False
-        last_sync = asyncio.run(self.session.load("last_sync"))
+        last_sync = self.session.load("last_sync")
         if not last_sync or datetime.now() - last_sync < timedelta(
             seconds=self.sync_delta
         ):
             timedelta_exceeded = True
         max_changes_exceeded = False
-        if self.logical_infrastructure.change_count() > self.max_changes:
+        if changes and len(changes) > self.max_changes:
             max_changes_exceeded = True
         if not timedelta_exceeded and not max_changes_exceeded:
             return None
@@ -93,4 +93,4 @@ class SynchronizePeers:
                 lg.raise_for_status()
             except httpx.HTTPError as e:
                 self.logger.error(f"Error synchronizing with {peer}: {e}")
-        asyncio.run(self.session.save("last_sync", datetime.now()))
+        self.session.save("last_sync", datetime.now())

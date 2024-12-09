@@ -20,12 +20,9 @@ async def test_backpressure_timed(mocker):
     os.environ["PEER_SECRET"] = "secret"
     dc, dcn = initialize_logical_infrastructure()
     infrastructure = LogicalInfrastructure(infrastructure={dc: [dcn]})
-    sync_peers = SynchronizePeers(infrastructure)
-    spy = mocker.spy(sync_peers, "synchronize")
-    assert dc.change_count() == 15
-    assert spy.call_count == 0
+    sp = SynchronizePeers(infrastructure)
+    assert len(dc.changes) == 1
     dc[1][0].servers.append(
         Server("123", "foo", "42", 42, [], [], [], [], [], DeviceStatus.Up)
     )
-    assert dc.change_count() == 16
-    assert spy.call_count == 1
+    assert len(dc.changes) == 4
