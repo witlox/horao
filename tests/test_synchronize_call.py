@@ -12,7 +12,7 @@ pytest_plugins = ("pytest_asyncio",)
 
 
 @pytest.mark.asyncio
-async def test_backpressure_timed(mocker):
+async def test_backpressure_timed():
     os.environ["DEBUG"] = "True"
     os.environ["TELEMETRY"] = "OFF"
     os.environ["PEER_STRICT"] = "False"
@@ -20,7 +20,7 @@ async def test_backpressure_timed(mocker):
     os.environ["PEER_SECRET"] = "secret"
     dc, dcn = initialize_logical_infrastructure()
     infrastructure = LogicalInfrastructure(infrastructure={dc: [dcn]})
-    sp = SynchronizePeers(infrastructure)
+    SynchronizePeers(infrastructure)
     assert len(dc.changes) == 1
     dc[1][0].servers.append(
         Server("123", "foo", "42", 42, [], [], [], [], [], DeviceStatus.Up)
