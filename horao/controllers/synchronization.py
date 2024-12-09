@@ -13,8 +13,8 @@ import platform
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-import httpx
-import jwt
+import httpx  # type: ignore
+import jwt  # type: ignore
 
 from horao.logical.infrastructure import LogicalInfrastructure
 from horao.persistance import HoraoEncoder, init_session
