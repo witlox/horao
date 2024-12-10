@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple, Any
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from horao.conceptual.claim import Claim, Reservation
 from horao.conceptual.decorators import instrument_class_function
@@ -45,8 +45,9 @@ class LogicalInfrastructure:
         """
         return [d.changes for d in self.infrastructure.keys()]
 
-    def clear(self) -> None:
-        self.infrastructure.clear()
+    def clear_changes(self) -> None:
+        for d in self.infrastructure.keys():
+            d.clear_changes()
 
     def copy(self) -> LogicalInfrastructure:
         return LogicalInfrastructure(

@@ -89,9 +89,31 @@ class DataCenter:
             if isinstance(changes, List):
                 self.changes.extend(changes)
             else:
-                self.changes.append(changes)
+                self.changes.append(changes)  # type: ignore
         for listener in self.listeners:
             listener(changes)
+
+    def clear_changes(self) -> None:
+        """
+        Clear the changes
+        :return: None
+        """
+        for _, v in self.rows.read().items():
+            for cabinet in v:
+                for server in cabinet.servers:
+                    server.disks.clear_history()
+                cabinet.servers.clear_history()
+                for chassis in cabinet.chassis:
+                    for blade in chassis.blades:
+                        for node in blade.nodes:
+                            for module in node.modules:
+                                module.disks.clear_history()
+                            node.modules.clear_history()
+                        blade.nodes.clear_history()
+                    chassis.blades.clear_history()
+                cabinet.chassis.clear_history()
+                cabinet.switches.clear_history()
+        self.changes = []
 
     @instrument_class_function(name="copy", level=logging.DEBUG)
     def copy(self) -> Dict[int, List[Cabinet]]:
@@ -145,23 +167,7 @@ class DataCenter:
                         self[number][self[number].index(cabinet)].merge(cabinet)
             else:
                 self[number] = row
-
-        # clear the change history
-        for _, v in self.rows.read().items():
-            for cabinet in v:
-                for server in cabinet.servers:
-                    server.disks.clear_history()
-                cabinet.servers.clear_history()
-                for chassis in cabinet.chassis:
-                    for blade in chassis.blades:
-                        for node in blade.nodes:
-                            for module in node.modules:
-                                module.disks.clear_history()
-                            node.modules.clear_history()
-                        blade.nodes.clear_history()
-                    chassis.blades.clear_history()
-                cabinet.chassis.clear_history()
-                cabinet.switches.clear_history()
+        self.clear_changes()
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, DataCenter):
