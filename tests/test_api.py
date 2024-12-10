@@ -16,7 +16,7 @@ def test_ping_service_unauthorized():
     os.environ["TELEMETRY"] = "OFF"
     ia = init(BasicAuthBackend())
     with TestClient(ia) as client:
-        lg = client.get("/ping")
+        lg = client.get("/reservations")
         assert 403 == lg.status_code
 
 
@@ -25,7 +25,7 @@ def test_ping_service_authorized():
     ia = init(BasicAuthBackend())
     with TestClient(ia) as client:
         lg = client.get(
-            "/ping", headers={"Authorization": basic_auth("netadm", "secret")}
+            "/reservations", headers={"Authorization": basic_auth("tenant", "secret2")}
         )
         assert 200 == lg.status_code
 

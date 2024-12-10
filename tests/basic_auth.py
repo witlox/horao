@@ -18,9 +18,16 @@ from starlette.authentication import (  # type: ignore
 from starlette.requests import HTTPException, Request  # type: ignore
 from starlette.responses import JSONResponse  # type: ignore
 
+from horao.auth.roles import Administrator, TenantController, User
+from horao.conceptual.tenant import Tenant
+
 basic_auth_structure = {
-    "netadm": {"password": "secret", "role": "network.admin"},
-    "sysadm": {"password": "secret", "role": "system.admin"},
+    "read_usr": {"password": "secret1", "role": User("read_usr")},
+    "tenant": {
+        "password": "secret2",
+        "role": TenantController("tenant", [Tenant("test", "owner")]),
+    },
+    "admin": {"password": "secret3", "role": Administrator("admin")},
 }
 
 
@@ -45,7 +52,10 @@ class BasicAuthBackend(AuthenticationBackend):
             or basic_auth_structure[username]["password"] != password
         ):
             raise AuthenticationError(f"access not allowed for {username}")
-        return AuthCredentials(["authenticated"]), SimpleUser(username)
+        return (
+            AuthCredentials(["authenticated"]),
+            basic_auth_structure[username]["role"],
+        )
 
 
 def basic_auth(username, password) -> str:

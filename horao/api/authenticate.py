@@ -2,6 +2,7 @@
 import os
 
 from authlib.integrations.starlette_client import OAuth  # type: ignore
+from starlette.authentication import requires
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
@@ -38,6 +39,7 @@ async def login(request: Request):
     return await client.authorize_redirect(request, redirect_uri)
 
 
+@requires("authenticated")
 async def logout(request: Request):
     """
     responses:
