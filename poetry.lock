@@ -22,6 +22,23 @@ test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypo
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
+name = "apiman"
+version = "0.5.4"
+description = "Integrate api manual for your web project"
+optional = false
+python-versions = ">=3.7,<4"
+files = [
+    {file = "apiman-0.5.4-py3-none-any.whl", hash = "sha256:91b6ccc1ac3e38d1d8aa8751a525cedf595f8ac87605749942fa8e0acca178df"},
+    {file = "apiman-0.5.4.tar.gz", hash = "sha256:b499681b3b501ded22e9c6eff5b156c72462c391b88561f9a4988dbee9a914d3"},
+]
+
+[package.dependencies]
+Jinja2 = ">=3.0.2"
+jsonschema-rs = ">=0.13.0"
+PyYAML = ">=6.0"
+xmltodict = ">=0.13.0"
+
+[[package]]
 name = "asgiref"
 version = "3.8.1"
 description = "ASGI specs, helper code, and adapters"
@@ -788,6 +805,79 @@ files = [
 
 [package.extras]
 colors = ["colorama (>=0.4.6)"]
+
+[[package]]
+name = "jinja2"
+version = "3.1.4"
+description = "A very fast and expressive template engine."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "jinja2-3.1.4-py3-none-any.whl", hash = "sha256:bc5dd2abb727a5319567b7a813e6a2e7318c39f4f487cfe6c89c6f9c7d25197d"},
+    {file = "jinja2-3.1.4.tar.gz", hash = "sha256:4a3aee7acbbe7303aede8e9648d13b8bf88a429282aa6122a993f0ac800cb369"},
+]
+
+[package.dependencies]
+MarkupSafe = ">=2.0"
+
+[package.extras]
+i18n = ["Babel (>=2.7)"]
+
+[[package]]
+name = "jsonschema-rs"
+version = "0.26.1"
+description = "A high-performance JSON Schema validator for Python"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "jsonschema_rs-0.26.1-cp310-cp310-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:5552075a161fd79e25dadd5a15f3708eb2a896e55e22b8622bb092250f3fb677"},
+    {file = "jsonschema_rs-0.26.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:619fdc2ed6b771fd884ce717d2d0526e58b7c3ad5852d20dfd2387023b031a7b"},
+    {file = "jsonschema_rs-0.26.1-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:2ce2c6ac1f09418e87dafe35c43c21211be8ea60c1bb6c5c2e4c0f71da821bf9"},
+    {file = "jsonschema_rs-0.26.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cc06f403f15004f891d8dc5bad48b4e8b281c4fcf26c15489183a109e4cca478"},
+    {file = "jsonschema_rs-0.26.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:85457113acde9982d5be7017046294cc8b0ebcaa56b7b063bab32112396ba2bc"},
+    {file = "jsonschema_rs-0.26.1-cp310-none-win32.whl", hash = "sha256:451d40262ce8dc529ec9d3dceb41073b70977b923cf5b4d9f96692f80f6230ad"},
+    {file = "jsonschema_rs-0.26.1-cp310-none-win_amd64.whl", hash = "sha256:5c6ddccebae684603a56f647fbf4a348a3cd98841972affa9543220da7da14ac"},
+    {file = "jsonschema_rs-0.26.1-cp311-cp311-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:8fb8df6eba2df02347d3e8db88a8350d54a54c7722a3426dd2bf7ca06b7526e2"},
+    {file = "jsonschema_rs-0.26.1-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:f20a9aa908027782e005ec5557c90aec723aca98d05d7380183a49595ec1b907"},
+    {file = "jsonschema_rs-0.26.1-cp311-cp311-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:d85c8c05fe1dd8803df2819e1928fcf71e6c465ce22905841a4745cab6e88e22"},
+    {file = "jsonschema_rs-0.26.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6a593b80cc43eb3d80a908323b18972cbe9287e1e5fa4195f2e876dccb48e8d8"},
+    {file = "jsonschema_rs-0.26.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:af6a64a9c29b730d9dcb4b212a8dd32bb492aaeb5bac584a2bac7afb21b64ca0"},
+    {file = "jsonschema_rs-0.26.1-cp311-none-win32.whl", hash = "sha256:63c494df42f8dd5a96ab89b0f485f0cf315d2a74d9f74d06ae441ca8f0b37aa6"},
+    {file = "jsonschema_rs-0.26.1-cp311-none-win_amd64.whl", hash = "sha256:2a4650b87fc8e575716544fe59736c4bf122061dbe38e5c2804685728f922dd5"},
+    {file = "jsonschema_rs-0.26.1-cp312-cp312-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:e5fedc9c06832ce2e115fb29c8f812392eabc031f44b8fc998a17fd272b85078"},
+    {file = "jsonschema_rs-0.26.1-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:fea71b79b2bf33449571f042530f38c4fd955c221fb8344b1a174b3986a24ef1"},
+    {file = "jsonschema_rs-0.26.1-cp312-cp312-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:9582c29abdd4dd8f90f4ed5ccb4e3fca5e5d80faaf6ee7dd8b9cdfca474a1790"},
+    {file = "jsonschema_rs-0.26.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:58435b0f316d2a3d4ac8241367980fa66c8ad72783228531d5640e7be891845a"},
+    {file = "jsonschema_rs-0.26.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:69bf6258f9529ef468cd3b307fdec7216e0233a48b9fde9c6faa946e4024f684"},
+    {file = "jsonschema_rs-0.26.1-cp312-none-win32.whl", hash = "sha256:2da5da5456b78488ab17aeef25cbd4ed74962568db4029aa74d024992e74b87a"},
+    {file = "jsonschema_rs-0.26.1-cp312-none-win_amd64.whl", hash = "sha256:55ba30c2fcb8e13a9762c5028c779ef77c7e53e19b3ebdfbcd1bead17103dcd7"},
+    {file = "jsonschema_rs-0.26.1-cp313-cp313-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:548be7473f0803a671aae7090c563e051ba1d6dec38d11e516fa1a75f397b9bf"},
+    {file = "jsonschema_rs-0.26.1-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:874ed3bc52ca04490a53fca14f8c0f14c72522ca7359c7ee7e26facd605a4c2c"},
+    {file = "jsonschema_rs-0.26.1-cp313-cp313-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:3e761b451ba8869ff02a563f7302532937f9c6047ce8f85b205c5708a2b34c72"},
+    {file = "jsonschema_rs-0.26.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6cc08bcccf87fb22cbf70bd73ee181148829c2a21c62bff53e44967e7bce4f3b"},
+    {file = "jsonschema_rs-0.26.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cc08d65d799a0c877d15b2547a5aa4035a8c11fce4bc12894c4d5d8a64345e17"},
+    {file = "jsonschema_rs-0.26.1-cp313-none-win32.whl", hash = "sha256:02b54cb3c6152686d031f8265e1241667a0813ed21073ada0b0f351b193d58ac"},
+    {file = "jsonschema_rs-0.26.1-cp313-none-win_amd64.whl", hash = "sha256:fdde9a2bc9c3fba12d8addfce162af8415fadaf6842f733093ec88d8b3ba924f"},
+    {file = "jsonschema_rs-0.26.1-cp38-cp38-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:25a65fd50a7a5c81a59deaedf70fd363635f807492be172bc91e3478f41e07b8"},
+    {file = "jsonschema_rs-0.26.1-cp38-cp38-macosx_10_12_x86_64.whl", hash = "sha256:b56931b4d4660725cb728fae2c3f4342c04c668e9c050e3ce39b8d1ff783b5a2"},
+    {file = "jsonschema_rs-0.26.1-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:8e25d79fc78bfdeed4892be365bf10218dc501996952b54a39985992f3a63021"},
+    {file = "jsonschema_rs-0.26.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d4708b364ba5308e7104b1991e0eae5092ffb46894817e74646faf0a1ac2eebd"},
+    {file = "jsonschema_rs-0.26.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3f9552eb5196d1a23ba9ad94c6d2138f4c769ff85a06a398c5bd56ad33c2dc34"},
+    {file = "jsonschema_rs-0.26.1-cp38-none-win32.whl", hash = "sha256:0e296388e3a5f82464936c7d530565bfb17560af0bc60da13f7e06f620941d38"},
+    {file = "jsonschema_rs-0.26.1-cp38-none-win_amd64.whl", hash = "sha256:000a15187ac8db38013ccdecee3f0dced1942787792a4d35a35d4840e605f842"},
+    {file = "jsonschema_rs-0.26.1-cp39-cp39-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:651ef97aa4033675d45d68aea2276cee2f46c5f38ee938d6cc6a46901b4e9cab"},
+    {file = "jsonschema_rs-0.26.1-cp39-cp39-macosx_10_12_x86_64.whl", hash = "sha256:f59f4bdbba1f74813f1888ecd80828c2a7547b11a5cdcd100e0065eb7a0995f7"},
+    {file = "jsonschema_rs-0.26.1-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:3893361d2a97e9d695ac43ff01e3665b5d2fa0e845cd8cfba15d36783a1e6fd4"},
+    {file = "jsonschema_rs-0.26.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:34b22b0b49565ea0fdf8e776a714c506c51134ca82f5d9b68d17f778075757fa"},
+    {file = "jsonschema_rs-0.26.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ba1bd5b5cbdc516032eb00f5e1f3b96f2b9fa47eb84fb09055000d0ea27fd61a"},
+    {file = "jsonschema_rs-0.26.1-cp39-none-win32.whl", hash = "sha256:8596c26c1a73e58c87004f95892d61118121377d8b608b052c0a194778585b24"},
+    {file = "jsonschema_rs-0.26.1-cp39-none-win_amd64.whl", hash = "sha256:4d94e995b870046bb08eaab9f1220dfeda5a1414d6a7016ef72b731349ea148d"},
+    {file = "jsonschema_rs-0.26.1.tar.gz", hash = "sha256:c711aedbd1e6911b12780e2a937241946f270590e27de495aa482bc8ce49aaa4"},
+]
+
+[package.extras]
+bench = ["fastjsonschema (>=2.20.0)", "jsonschema (>=4.23.0)", "pytest-benchmark (>=4.0.0)"]
+tests = ["flask (>=2.2.5)", "hypothesis (>=6.79.4)", "pytest (>=7.4.4)"]
 
 [[package]]
 name = "markupsafe"
@@ -1747,6 +1837,17 @@ files = [
 ]
 
 [[package]]
+name = "xmltodict"
+version = "0.14.2"
+description = "Makes working with XML feel like you are working with JSON"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "xmltodict-0.14.2-py2.py3-none-any.whl", hash = "sha256:20cc7d723ed729276e808f26fb6b3599f786cbc37e06c65e192ba77c40f20aac"},
+    {file = "xmltodict-0.14.2.tar.gz", hash = "sha256:201e7c28bb210e374999d1dde6382923ab0ed1a8a5faeece48ab525b7810a553"},
+]
+
+[[package]]
 name = "zipp"
 version = "3.21.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -1768,4 +1869,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "91f86b86a3e8cb17b0ee321c969f371576375fd17316383d3760d7f6ef7aa676"
+content-hash = "935bf29f7d7cbebec499ac532ad3891bef0b0eacc68520c25b28e618f6e22ee1"

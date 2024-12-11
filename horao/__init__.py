@@ -33,6 +33,7 @@ else:
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # type: ignore
     from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter  # type: ignore
 
+from apiman.starlette import Apiman  # type: ignore
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # type: ignore
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore
 from opentelemetry.sdk.trace.export import BatchSpanProcessor  # type: ignore
@@ -94,34 +95,6 @@ if "OLTP_COLLECTOR_URL" in os.environ:
     metrics.set_meter_provider(meter_provider)
 
 
-schemas = SchemaGenerator(
-    {"openapi": "3.0.0", "info": {"title": "HORAO API", "version": "1.0"}}
-)
-
-
-def openapi_schema(request):
-    return schemas.OpenAPIResponse(request=request)
-
-
-async def docs(request):
-    html = f"""
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>HORAO - Redoc</title>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-          </head>
-          <body>
-            <redoc spec-url="{request.url.scheme}://{request.url.netloc}/openapi.json"></redoc>
-            <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
-          </body>
-        </html>
-    """
-    return HTMLResponse(html)
-
-
 def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
     """
     Initialize the API
@@ -150,10 +123,12 @@ def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
             endpoint=horao.api.user_actions.get_reservations,
             methods=["GET"],
         ),
-        Route("/openapi.json", endpoint=openapi_schema, include_in_schema=False),
+        Route(
+            "/reservation",
+            endpoint=horao.api.user_actions.create_reservation,
+            methods=["POST"],
+        ),
     ]
-    if os.getenv("UI", "False") == "True":
-        routes.append(Route("/docs", endpoint=docs, methods=["GET"]))
     middleware = [
         Middleware(CORSMiddleware, allow_origins=[cors]),
     ]
@@ -169,6 +144,14 @@ def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
         middleware=middleware,
         debug=False if os.getenv("DEBUG", "False") == "False" else True,
     )
+    if os.getenv("UI", "False") == "True":
+        apiman = Apiman(
+            title="Horao",
+            specification_url="/spec/",
+            redoc_url="/docs/",
+            template="openapi/openapi.yml",
+        )
+        apiman.init_app(app)
     if os.getenv("TELEMETRY", "ON") == "OFF":
         logger.warning("Telemetry is turned off")
     else:

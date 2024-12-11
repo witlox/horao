@@ -17,22 +17,50 @@ from horao.persistance import HoraoDecoder, init_session
 @permission_required(Namespace.Peer, Permission.Write)
 async def synchronize(request: Request) -> JSONResponse:
     """
-    responses:
-      200:
-        description: synchronize logical infrastructures.
-        examples:
-          { "LogicalInfrastructure": {
-            "type": "LogicalInfrastructure",
-            "infrastructure": {},
-            "constraints": {},
-            "claims": {},
-          }}
-      400:
-        description: Error parsing request
-      403:
-        description: Unauthorized
-      500:
-        description: Error synchronizing
+    synchronize
+    ---
+    post:
+      summary: synchronize
+      description: Synchronize infrastructure, claims and constraints among HORAO instances
+      tags:
+      - system
+      requestBody:
+        description: infrastructure, claims and constraints
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                infrastructure:
+                  type: object
+                  additionalProperties:
+                    type: array
+                claims:
+                  type: object
+                  additionalProperties:
+                    type: array
+                constraints:
+                  type: object
+                  additionalProperties:
+                    type: array
+              example:
+                infrastructure:
+                    "dc1": []
+                    "dc2": []
+                constraints:
+                    "constraint1": []
+                claims:
+                    "claim1": []
+      responses:
+        "200":
+          description: Synchronization successful
+        "400":
+          description: Error parsing request
+        "403":
+          description: Unauthorized
+        "500":
+          description: Error synchronizing
     """
     logging.debug(f"Calling Synchronize ({request})")
     try:
@@ -55,4 +83,6 @@ async def synchronize(request: Request) -> JSONResponse:
                 status_code=500, content={"error": f"Error synchronizing {str(e)}"}
             )
         return JSONResponse(status_code=500, content={"error": f"Error synchronizing"})
-    return JSONResponse(status_code=200, content={"status": "is alive"})
+    return JSONResponse(
+        status_code=200, content={"message": "Synchronization successful"}
+    )
