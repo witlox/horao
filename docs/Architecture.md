@@ -12,10 +12,10 @@ The intent is that there are 3 rough dimension of any given datacenter; network,
 
 # Distribution pattern
 In order to aggregate the lower level resources into a logical infrastructure, we assume that any
-instance of `HORAO` will have all information eventually. We will leverage CRDTs to ensure consistency
-across all instances of `HORAO`. The main CRDT datastructure we leverage is Last-Writer-Wins Map (LWWMap).
+instance of `HORAO` will have all information eventually. We will leverage [CRDTs](https://crdt.tech) to ensure consistency
+across all instances of `HORAO`. The main [CRDT datastructure](https://crdt.tech/glossary) we leverage is Last-Writer-Wins Map (LWWMap).
 The LWWMap internally uses Last-Writer-Wins register (LWWRegister) to ensure consistent key-value pairs.
-The internal synchronization mechanism of the CRDTs is based on a Lamport Logical Clock, this clock uses
+The internal synchronization mechanism of the CRDTs is based on a [Lamport Logical Clock](https://www.geeksforgeeks.org/logical-clock-in-distributed-system/), this clock uses
 a vector based on unix timestamps to ensure that the order of operations is consistent across all instances.
 When running multiple instances of `HORAO` we will synchronize the state of the CRDTs using the API.
 Because we are using an actual clock, it is important to ensure that the clocks are synchronized across all instances.
@@ -23,8 +23,8 @@ We recommend to use NTP to synchronize the clocks, and if needed one can set an 
 
 ## Synchronization and backup
 Because of the nature of the design, split-brain situations should not exist. 
-We will synchronize state via the `HORAO` API (over websockets in starlette).
-Persistent storage will be provided by a key-value database (Redis).
+We will synchronize state via the `HORAO` API.
+Persistent storage will be provided by a(n optional) key-value database (Redis).
 The synchronization mechanism used by the CRDTs is based on a Lamport Logical Clock, using a vector based on unix timestamps.
 Due to the nature of this, we may want to allow for a 'small' clock-skew.
 This can be configured in the `.env` file as follows:

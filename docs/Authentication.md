@@ -40,7 +40,7 @@ OAUTH_ROLE_URI=https://claims.idp.example.com/role
 The `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` are the client id and client secret that are provided by the Open ID Connect provider.
 
 ### Administrators
-Administrators are identified by the roles custom claim. The roles custom claim is used to identify the administrators. The roles custom claim is stored in the `.env` file as follows:
+Administrators are identified by the roles custom claim. The roles custom claim is stored in the `.env` file as follows:
 ```dotenv
 ADMINISTRATOR_ROLE=administrator
 ```
