@@ -9,6 +9,7 @@ and software resources of the system.
 """
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 from opentelemetry import metrics, trace  # type: ignore
@@ -95,6 +96,14 @@ if "OLTP_COLLECTOR_URL" in os.environ:
     metrics.set_meter_provider(meter_provider)
 
 
+def get_project_root() -> Path:
+    """
+    Get the project root
+    :return: path to project root
+    """
+    return Path(__file__).parent
+
+
 def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
     """
     Initialize the API
@@ -149,7 +158,7 @@ def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
             title="Horao",
             specification_url="/spec/",
             redoc_url="/docs/",
-            template="openapi/openapi.yml",
+            template=str(Path.joinpath(get_project_root(), "openapi/openapi.yml")),
         )
         apiman.init_app(app)
     if os.getenv("TELEMETRY", "ON") == "OFF":

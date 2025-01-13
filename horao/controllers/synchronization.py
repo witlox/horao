@@ -62,7 +62,7 @@ class SynchronizePeers:
         will only call synchronize if there are any changes if the timer expires
         note: currently only the infrastructure is tracked, changes to claims and constraints are not tracked
         :param changes: optional list of changes
-        :return: None
+        :return: None (if nothing happened) or datetime if synchronized
         """
         if not self.peers:
             return None

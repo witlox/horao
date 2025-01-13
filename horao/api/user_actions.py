@@ -132,7 +132,7 @@ async def create_reservation(request: Request) -> JSONResponse:
         "500":
           description: Error processing reservation
     """
-    logging.debug(f"Calling Reservations ({request})")
+    logging.debug(f"Creating Reservation ({request})")
     try:
         data = await request.json()
         claim = json.loads(data, cls=HoraoDecoder)
