@@ -2,7 +2,10 @@
 
 [![Python package](https://github.com/witlox/horao/actions/workflows/build-test.yml/badge.svg)](https://github.com/witlox/horao/actions/workflows/tox.yml) ![Python package](https://github.com/witlox/horao/actions/workflows/type-checks.yml/badge.svg) [![codecov](https://codecov.io/github/witlox/horao/graph/badge.svg?token=WP4MHBX34H)](https://codecov.io/github/witlox/horao)
 
-There are various cloud based management engines available. These tend to be either very specific to a certain cloud provider, or very generic and complex. The goal of HORAO is to provide a simple, yet powerful, management engine that can be used to manage hybrid multi-cloud environments. One of the key design features is to provide a model-based approach to managing resources, which allows for a high level of abstraction and automation.
+The goal of `HORAO` is to be able to manage tenants across various hybrid multi-cloud environments. The engine is designed to be able to manage resources across various cloud providers, such as AWS, Azure, and GCP as well as on-prem with engines like [OCHAMI](https://www.ochami.org).
+One of the key design features is to provide a model-based approach to managing resources, which allows for a high level of abstraction and automation.
+`HORAO` will be able to check the current allocation state of the distributed resources, and users will be able to create reservations based on time and availability.
+Secondary, site administrators will be able to plan maintenance events, to validate what the impact of a maintenance event will be on the tenants. 
 
 For development please check out the [Architecture](docs/Architecture.md) and [Development notes](docs/Development.md).
 

@@ -50,7 +50,7 @@ async def logout(request: Request):
     logout
     ---
     post:
-      summary: Logout
+      summary: logout
       description: Logout
       responses:
         "302":
