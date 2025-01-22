@@ -61,7 +61,7 @@ addopts = "--cov --cov-report xml"
 [tool.coverage.run]
 omit = [
     "*/tests/*",
-    "*/__main__.py",
+    "*/main.py",
 ]
 
 [build-system]
