@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-#
 """Controller for synchronization infrastructural state with AWS.
-Note that we assume that the resources in AWS are tagged with a specific tag and value specified in the configuration.
-Also note that we will treat each AZ in each region that has these tagged resources as a separate DataCenter object.
+Notes:
+    One should configure the AWS credentials via the AWS CLI or AWS environment variables.
+    We assume that the resources in AWS are tagged with a specific tag and value specified in the configuration.
+    We will treat each AZ in each region that has these tagged resources as a separate DataCenter object.
 """
 import json
+import logging
 import os
+from typing import Any, Dict, List, Optional
 
 import boto3  # type: ignore
+from botocore.client import BaseClient  # type: ignore
 
 from horao.controllers.base import BaseController
 from horao.logical.data_center import DataCenter
@@ -23,6 +28,7 @@ class AmazonWebServicesController(BaseController):
     def __init__(self, datacenters):
         """Initialize AWS controller."""
         super().__init__(datacenters)
+        self.logger = logging.getLogger(__name__)
         aws_file = os.getenv("AWS_CONFIG_FILE")
         if not aws_file:
             raise RuntimeError("AWS_CONFIG_FILE environment variable not set")
@@ -32,18 +38,89 @@ class AmazonWebServicesController(BaseController):
         aws_tag_value = os.getenv("AWS_TAG_VALUE")
         if not aws_tag_value:
             raise RuntimeError("AWS_TAG_VALUE environment variable not set")
+        self.aws_regions = os.getenv("AWS_REGIONS")
+        if not self.aws_regions:
+            self.logger.warning(
+                "AWS_REGIONS environment variable not set, using default region"
+            )
+        else:
+            self.aws_regions = self.aws_regions.split(",")
         self.custom_filter = [{"Name": f"tag:{aws_tag}", "Values": [aws_tag_value]}]
 
-    def sync(self):
+    def sync(self) -> None:
         """
         Synchronize AWS resource utilization to local structure.
         Currently each AZ has one row per VPC with one cabinet,
         this may change in the future.
-        Todo: currently only ec2, add network and storage"""
-        client = boto3.client("ec2")
-        response = client.describe_instances(Filters=self.custom_filter)
-        restructured = {}
+        Todo: currently only ec2, need to add network and storage
+        :return: None
+        :raises RuntimeError: if instance type not found
+        """
+
+        def internal_sync(r: Optional[str]) -> None:
+            client = (
+                boto3.client("ec2") if not r else boto3.client("ec2", region_name=r)
+            )
+            response = client.describe_instances(Filters=self.custom_filter)
+            restructured = self.enumerate_machines(client, response)
+            for composed in restructured.keys():
+                dc, vpc = composed.split(":")
+                datacenter = next(
+                    iter([d for d in self.datacenters.keys() if d.name == dc]), None
+                )
+                if not datacenter:
+                    self.datacenters[
+                        DataCenter(
+                            dc,
+                            len(self.datacenters),
+                        )
+                    ] = []
+                    datacenter = next(
+                        iter([d for d in self.datacenters.keys() if d.name == dc]),
+                        None,
+                    )
+                cabinet = None
+                row_nr = 1
+                for nr, cabinets in datacenter.values():  # type: ignore
+                    # one cabinet per VPC
+                    for c in cabinets:  # type: ignore
+                        if c.name == vpc:
+                            cabinet = c
+                            break
+                    row_nr = nr  # type: ignore
+                if not cabinet:
+                    datacenter[row_nr + 1] = [  # type: ignore
+                        Cabinet("AWS", vpc, "cloud", len(datacenter) + 1, restructured[dc], [], [])  # type: ignore
+                    ]
+                else:
+                    for server in restructured[dc]:
+                        if server not in cabinet.servers:
+                            cabinet.servers.append(server)
+                    for server in cabinet.servers:
+                        if server not in restructured[dc]:
+                            cabinet.servers.remove(server)
+
+        if self.aws_regions:
+            for region in self.aws_regions:
+                internal_sync(region)
+        else:
+            internal_sync(None)
+
+    def enumerate_machines(
+        self, client: BaseClient, response: Any, region: Optional[str] = None
+    ) -> Dict[str, List[Server]]:
+        """
+        Enumerate all machines in the response.
+        Will create a dictionary of key: AWS-({REGION}-)AZ:VPCID with a list of servers as value.
+        :param client: botoclient
+        :param response: client response
+        :param region: optional region
+        :return: dict of specific VPCID key with list of Server as value
+        :raises RuntimeError: if instance type not found
+        """
+        restructured: Dict[str, List[Server]] = {}
         for reservation in response["Reservations"]:
+            # todo needs optimization
             # first loop to get all instance types
             instance_types = []
             for instance in reservation["Instances"]:
@@ -54,6 +131,11 @@ class AmazonWebServicesController(BaseController):
             )
             # second loop to get all instances
             for instance in reservation["Instances"]:
+                placement_key = (
+                    f'AWS-{instance["Placement"]["AvailabilityZone"]}'
+                    if not region
+                    else f'AWS-{region}-{instance["Placement"]["AvailabilityZone"]}'
+                )
                 instance_type = next(
                     iter(
                         [
@@ -68,22 +150,15 @@ class AmazonWebServicesController(BaseController):
                     raise RuntimeError(
                         f"Instance type {instance['InstanceType']} not found for AWS EC2"
                     )
-                if f'AWS-{instance["Placement"]["AvailabilityZone"]}' not in [
-                    d.name for d in self.datacenters.keys()
-                ]:
+                if placement_key not in [d.name for d in self.datacenters.keys()]:
                     self.datacenters[
                         DataCenter(
-                            f'AWS-{instance["Placement"]["AvailabilityZone"]}',
+                            placement_key,
                             len(self.datacenters),
                         )
                     ] = []
-                if (
-                    f'{instance["Placement"]["AvailabilityZone"]}:{instance["VpcId"]}'
-                    not in restructured.keys()
-                ):
-                    restructured[
-                        f'{instance["Placement"]["AvailabilityZone"]}:{instance["VpcId"]}'
-                    ] = []
+                if f'{placement_key}:{instance["VpcId"]}' not in restructured.keys():
+                    restructured[f'{placement_key}:{instance["VpcId"]}'] = []
                 cpus = []
                 for i in range(1, int(instance_type["VCpuInfo"]["ValidCores"])):
                     cpus.append(
@@ -117,6 +192,7 @@ class AmazonWebServicesController(BaseController):
                             mac = nic["MacAddress"]
                             if nic["Status"] == "in-use":
                                 status = DeviceStatus.Up
+                            break
                     nics.append(
                         NIC(
                             f'AWS-{instance["InstanceType"]}',
@@ -126,7 +202,7 @@ class AmazonWebServicesController(BaseController):
                                 Port(
                                     f'AWS-{instance["InstanceType"]}',
                                     f'AWS-{instance["InstanceType"]}-NIC-PORT',
-                                    len(nics) + 1,
+                                    1,
                                     mac,
                                     status,
                                     True,
@@ -135,7 +211,7 @@ class AmazonWebServicesController(BaseController):
                             ],
                         )
                     )
-                disks = []
+                disks: List[Disk] = []
                 for block_device in instance_type["InstanceStorageInfo"]["Disks"]:
                     disks.append(
                         Disk(
@@ -145,7 +221,7 @@ class AmazonWebServicesController(BaseController):
                             int(block_device["SizeInGB"]),
                         )
                     )
-                accelerators = []
+                accelerators: List[Accelerator] = []
                 for gpu in instance_type["GpuInfo"]["Gpus"]:
                     accelerators.append(
                         Accelerator(
@@ -179,9 +255,7 @@ class AmazonWebServicesController(BaseController):
                             None,
                         )
                     )
-                restructured[
-                    f'{instance["Placement"]["AvailabilityZone"]}:{instance["VpcId"]}'
-                ].append(
+                restructured[f'{placement_key}:{instance["VpcId"]}'].append(
                     Server(
                         instance["InstanceId"],
                         instance["InstanceId"],
@@ -190,7 +264,8 @@ class AmazonWebServicesController(BaseController):
                             restructured[
                                 f'{instance["Placement"]["AvailabilityZone"]}:{instance["VpcId"]}'
                             ]
-                        ),
+                        )
+                        + 1,
                         cpus,
                         rams,
                         nics,
@@ -203,25 +278,8 @@ class AmazonWebServicesController(BaseController):
                         ),
                     )
                 )
-        for composed in restructured.keys():
-            dc, vpc = composed.split(":")
-            datacenter = next(
-                iter([d for d in self.datacenters.keys() if d.name == dc]), None
-            )
-            if not datacenter[1]:
-                datacenter[1] = [
-                    Cabinet("AWS", vpc, "cloud", 1, restructured[dc], [], [])
-                ]
-            else:
-                for server in [d.servers for d in datacenter[0] if d.name == vpc]:
-                    if server not in restructured[dc]:
-                        datacenter[1][0].servers.append(server)
-                for server in restructured[dc]:
-                    if server not in [
-                        d.servers for d in datacenter[1] if d.name == vpc
-                    ]:
-                        datacenter[1][0].servers.remove(server)
+        return restructured
 
     def subscribe(self):
-        """Subscribe to AWS."""
-        pass
+        """Subscribe to AWS updates dynamically."""
+        raise NotImplementedError("Subscribe to AWS updates not implemented yet")
