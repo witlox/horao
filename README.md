@@ -1,6 +1,7 @@
 # HORAO: management engine for hybrid multi-cloud environments
 
 [![Python package](https://github.com/witlox/horao/actions/workflows/build-test.yml/badge.svg)](https://github.com/witlox/horao/actions/workflows/tox.yml) ![Python package](https://github.com/witlox/horao/actions/workflows/type-checks.yml/badge.svg) [![codecov](https://codecov.io/github/witlox/horao/graph/badge.svg?token=WP4MHBX34H)](https://codecov.io/github/witlox/horao)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwitlox%2Fhorao.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwitlox%2Fhorao?ref=badge_shield)
 
 The goal of `HORAO` is to be able to manage tenants across various hybrid multi-cloud environments. The engine is designed to be able to manage resources across various cloud providers, such as AWS, Azure, and GCP as well as on-prem with engines like [OCHAMI](https://www.ochami.org).
 One of the key design features is to provide a model-based approach to managing resources, which allows for a high level of abstraction and automation.
@@ -56,3 +57,7 @@ PEERS: a,b,c #string, default=""; set the comma seperated list of peers to sync 
 REDIS_URL: redis://localhost:6379/0 #string, default="redis://redis:6379/0"; set the URL for the Redis database
 ```
 For all other settings, please check the relevant documentation at https://witlox.github.io/horao/.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwitlox%2Fhorao.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwitlox%2Fhorao?ref=badge_large)
