@@ -1,7 +1,10 @@
 # HORAO: management engine for hybrid multi-cloud environments
-
-[![Python package](https://github.com/witlox/horao/actions/workflows/build-test.yml/badge.svg)](https://github.com/witlox/horao/actions/workflows/tox.yml) ![Python package](https://github.com/witlox/horao/actions/workflows/type-checks.yml/badge.svg) [![codecov](https://codecov.io/github/witlox/horao/graph/badge.svg?token=WP4MHBX34H)](https://codecov.io/github/witlox/horao) [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwitlox%2Fhorao.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwitlox%2Fhorao?ref=badge_shield&issueType=license)
-
+***
+[![Python package](https://github.com/witlox/horao/actions/workflows/build-test.yml/badge.svg)](https://github.com/witlox/horao/actions/workflows/tox.yml) ![Python package](https://github.com/witlox/horao/actions/workflows/type-checks.yml/badge.svg) [![codecov](https://codecov.io/github/witlox/horao/graph/badge.svg?token=WP4MHBX34H)](https://codecov.io/github/witlox/horao) 
+***
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwitlox%2Fhorao.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwitlox%2Fhorao?ref=badge_shield&issueType=license)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwitlox%2Fhorao.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwitlox%2Fhorao?ref=badge_shield&issueType=security)
+***
 The goal of `HORAO` is to be able to manage tenants across various hybrid multi-cloud environments. The engine is designed to be able to manage resources across various cloud providers, such as AWS, Azure, and GCP as well as on-prem with engines like [OCHAMI](https://www.ochami.org).
 One of the key design features is to provide a model-based approach to managing resources, which allows for a high level of abstraction and automation.
 `HORAO` will be able to check the current allocation state of the distributed resources, and users will be able to create reservations based on time and availability.
