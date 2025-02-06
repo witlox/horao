@@ -27,7 +27,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_HORAO_PACKAGE }}
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
@@ -41,8 +41,6 @@ jobs:
           push: true
           tags: ${{ github.sha }}, latest
           labels: ${{ steps.meta.outputs.labels }}
-          secrets: |
-            "github_token=${{ secrets.GITHUB_TOKEN }}"
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
