@@ -27,7 +27,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_HORAO_PACKAGE }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
