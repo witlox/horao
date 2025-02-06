@@ -41,6 +41,8 @@ jobs:
           push: true
           tags: ${{ github.sha }}, latest
           labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            "github_token=${{ secrets.GITHUB_TOKEN }}"
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
