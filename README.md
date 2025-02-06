@@ -51,8 +51,8 @@ The following settings should be configured:
 DEBUG: False #boolean, default=False; set to True to enable debug mode, very chatty
 UI: False #boolean, default=False; set to True to enable the UI for the API
 CORS: * #string, default=*; set to the allowed origins for CORS
-PEER_SECRET: "abracadabra" #string, default=""; set the secret for authenticating peers
-PEERS: "a,b,c" #string, default=""; set the comma seperated list of peers to sync with 
+PEER_SECRET: abracadabra #string, default=""; set the secret for authenticating peers
+PEERS: a,b,c #string, default=""; set the comma seperated list of peers to sync with 
 REDIS_URL: redis://localhost:6379/0 #string, default="redis://redis:6379/0"; set the URL for the Redis database
 ```
 For all other settings, please check the relevant documentation at https://witlox.github.io/horao/.
