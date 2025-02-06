@@ -56,4 +56,3 @@ PEERS: a,b,c #string, default=""; set the comma seperated list of peers to sync 
 REDIS_URL: redis://localhost:6379/0 #string, default="redis://redis:6379/0"; set the URL for the Redis database
 ```
 For all other settings, please check the relevant documentation at https://witlox.github.io/horao/.
-
