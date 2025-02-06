@@ -35,7 +35,7 @@ The command line way:
   b. `poetry run gunicorn horao:init -k uvicorn.workers.UvicornWorker --reload`
 ```
 
-The docker way (using python base), either use the `devcontainer` or run with `docker-compose`:
+The docker way, either use the `devcontainer` or run with `docker-compose`:
 ```bash
 1. Clone the repository
 2. Run the project
