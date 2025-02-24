@@ -11,4 +11,5 @@ These pages are currently available:
 - [Development notes](./Development.md)
 - [Creating a virtual environment](./CreateVirtualEnv.md)
 - [Authentication](./Authentication.md)
+- [Controllers](./Controllers.md)
 - [Telemetry](./Telemetry.md)
