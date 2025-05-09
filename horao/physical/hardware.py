@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, TypeVar, Optional
+from typing import List, Optional, TypeVar
 
 from horao.conceptual.crdt import CRDTList, LastWriterWinsMap
 

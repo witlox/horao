@@ -11,7 +11,7 @@ from horao.persistance.store import Store
 from horao.physical.component import CPU, RAM
 from horao.physical.computer import Server
 from horao.physical.hardware import HardwareList
-from horao.physical.network import Switch, Port, SwitchType, NIC
+from horao.physical.network import NIC, Port, Switch, SwitchType
 from horao.physical.status import DeviceStatus
 from tests.logical.test_scheduler import initialize_logical_infrastructure
 

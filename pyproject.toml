@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "horao"
-version = "2024.1.1"
+version = "2025.2.1"
 description = "HORAO - management engine for hybrid multi-cloud environments"
 readme = "README.md"
 authors = ["Pim Witlox <pim@witlox.io>"]
@@ -29,6 +29,7 @@ azure-identity = "^1.19.0"
 
 [tool.poetry.scripts]
 horao = 'horao.main:main'
+research = "horao.research:run_all_validations"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
@@ -51,16 +52,28 @@ pytest_httpserver = "^1.1.0"
 [tool.poetry.group.test]
 optional = true
 
+[tool.poetry.group.research.dependencies]
+numpy = "^1.26.3"
+psutil = "^5.9.8"
+matplotlib = "^3.8.2"
+pandas = "^2.1.4"
+asyncio = "^3.4.3"
+
+[tool.poetry.group.research]
+optional = true
+
 [tool.isort]
 profile = "black"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "--cov --cov-report xml"
+testpaths = "tests"
 
 [tool.coverage.run]
 omit = [
     "*/tests/*",
+    "*/research/*",
     "*/main.py",
 ]
 

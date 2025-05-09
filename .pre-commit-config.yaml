@@ -9,6 +9,6 @@ repos:
       types: [file, python]
     - id: isort
       name: isort
-      entry: poetry run isort
+      entry: poetry run isort horao
       language: system
       types: [file, python]

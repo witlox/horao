@@ -6,7 +6,7 @@ Serialization is done using JSON.
 """
 import os
 
-from .serialize import HoraoEncoder, HoraoDecoder
+from .serialize import HoraoDecoder, HoraoEncoder
 from .store import Store
 
 session = None

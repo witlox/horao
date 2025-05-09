@@ -1,10 +1,10 @@
 from itertools import permutations
 
 from horao.conceptual.crdt import (
+    CRDTList,
     LastWriterWinsMap,
     LastWriterWinsRegister,
     ObservedRemovedSet,
-    CRDTList,
 )
 from horao.conceptual.support import LogicalClock, Update
 
