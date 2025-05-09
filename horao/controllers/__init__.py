@@ -5,3 +5,7 @@ This package contains the controllers for the various backends that are used in 
 responsible for orchestrating the resources on various control planes in various datacenters. Also instructions for
 higher level platforms like Kubernetes, OpenStack, Slurm, Clouds, etc. are defined here.
 """
+
+from .aws import AmazonWebServicesController
+from .gcp import GoogleCloudController
+from .ma import MicrosoftAzureController

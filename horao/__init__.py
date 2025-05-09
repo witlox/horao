@@ -7,8 +7,10 @@ orchestrating the resources on various control planes in various datacenters. Al
 platforms like Kubernetes, OpenStack, Slurm, Clouds, etc. are defined here. The models are used to model the hardware
 and software resources of the system.
 """
+import contextlib
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -45,6 +47,8 @@ from starlette.middleware.cors import CORSMiddleware  # type: ignore
 from starlette.responses import HTMLResponse  # type: ignore
 from starlette.routing import Route  # type: ignore
 from starlette.schemas import SchemaGenerator  # type: ignore
+from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
+from apscheduler.triggers.interval import IntervalTrigger  # type: ignore
 
 import horao.api
 import horao.api.synchronization
@@ -94,6 +98,39 @@ if "OLTP_COLLECTOR_URL" in os.environ:
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(meter_provider)
+
+
+def controller_synchronize() -> None:
+    logger = logging.getLogger("horao.controller_synchronize")
+    if not os.getenv("CONTROLLER_BACKEND", None):
+        logger.exception("CONTROLLER_BACKEND not set, cannot synchronize!")
+        return
+    from horao.persistance import init_session
+
+    session = init_session()
+    logical_infrastructure = session.load_logical_infrastructure()
+    if os.getenv("CONTROLLER_BACKEND") == "AWS":
+        from horao.controllers.aws import AmazonWebServicesController
+
+        aws_ctl = AmazonWebServicesController(logical_infrastructure)
+        aws_ctl.sync()
+    elif os.getenv("CONTROLLER_BACKEND") == "GCP":
+        from horao.controllers.gcp import GoogleCloudController
+
+        gcp_ctl = GoogleCloudController(logical_infrastructure)
+        gcp_ctl.sync()
+    elif os.getenv("CONTROLLER_BACKEND") == "MA":
+        from horao.controllers.ma import MicrosoftAzureController
+
+        ma_ctl = MicrosoftAzureController(logical_infrastructure)
+        ma_ctl.sync()
+    else:
+        logger.exception(
+            f"CONTROLLER_BACKEND {os.getenv('CONTROLLER_BACKEND')} not supported!"
+        )
+        return
+    # todo: check that change-stack is not overwritten
+    session.save_logical_infrastructure(logical_infrastructure)
 
 
 def get_project_root() -> Path:
@@ -148,7 +185,18 @@ def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
         middleware.append(
             Middleware(AuthenticationMiddleware, backend=MultiAuthBackend())
         )
+    logger.info("configuring controller scheduler")
+    scheduler = BackgroundScheduler()
+    trigger = IntervalTrigger(seconds=os.getenv("CONTROLLER_PULL_INTERVAL", 60))
+    scheduler.add_job(controller_synchronize, trigger)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(a: Starlette):
+        yield
+        scheduler.shutdown()
+
     app = Starlette(
+        lifespan=lifespan,
         routes=routes,
         middleware=middleware,
         debug=False if os.getenv("DEBUG", "False") == "False" else True,
@@ -165,4 +213,7 @@ def init(authorization: Optional[AuthenticationBackend] = None) -> Starlette:
         logger.warning("Telemetry is turned off")
     else:
         StarletteInstrumentor().instrument_app(app)
+    logger.info("starting controller scheduler")
+    scheduler.start()
+    logger.info("--initialized--")
     return app
