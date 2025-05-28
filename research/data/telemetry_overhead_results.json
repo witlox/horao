@@ -7,7 +7,8 @@
       "cpu": "Intel Xeon E5-2680 v4 @ 2.40GHz",
       "memory": "64GB DDR4",
       "os": "Ubuntu 22.04 LTS"
-    }
+    },
+    "framework": "horao-telemetry-benchmark"
   },
   "system_impact": {
     "cpu_overhead_percent": {
@@ -139,5 +140,59 @@
       "memory_overhead_mb": [312.4, 340.0, 298.0, 326.5, 319.3, 342.8, 293.5, 322.1, 345.5, 314.7],
       "storage_size_per_day_gb": [6.7, 7.3, 6.4, 7.1, 6.9, 7.4, 6.3, 7.0, 7.5, 6.8]
     }
+  },
+  "instrumentation_overhead": {
+    "plain_function": [0.0012, 0.0015, 0.0010, 0.0014, 0.0013],
+    "decorated_function_debug": [0.0231, 0.0257, 0.0218, 0.0245, 0.0236],
+    "decorated_function_info": [0.0189, 0.0205, 0.0176, 0.0198, 0.0192],
+    "crdt_operation_overhead": [0.0376, 0.0402, 0.0345, 0.0389, 0.0382],
+    "async_store_operation": [0.1245, 0.1378, 0.1187, 0.1325, 0.1267]
+  },
+  "decorator_performance": {
+    "logging_levels": {
+      "debug": [0.0231, 0.0257, 0.0218, 0.0245, 0.0236],
+      "info": [0.0189, 0.0205, 0.0176, 0.0198, 0.0192],
+      "warning": [0.0094, 0.0103, 0.0088, 0.0099, 0.0096],
+      "error": [0.0085, 0.0093, 0.0080, 0.0089, 0.0087],
+      "critical": [0.0081, 0.0088, 0.0076, 0.0085, 0.0082]
+    },
+    "function_complexity": {
+      "simple": [0.0156, 0.0170, 0.0148, 0.0164, 0.0159],
+      "medium": [0.0231, 0.0252, 0.0220, 0.0242, 0.0236],
+      "complex": [0.0345, 0.0376, 0.0328, 0.0362, 0.0353]
+    },
+    "call_frequency": {
+      "low": [0.0987, 0.1076, 0.0938, 0.1036, 0.1012],
+      "medium": [0.2354, 0.2566, 0.2236, 0.2472, 0.2413],
+      "high": [0.5678, 0.6189, 0.5394, 0.5962, 0.5823]
+    }
+  },
+  "store_performance": {
+    "async_operations": {
+      "async_load_small": [12.3, 13.4, 11.7, 12.9, 12.6],
+      "async_load_medium": [45.6, 49.7, 43.3, 47.9, 46.8],
+      "async_load_large": [98.7, 107.6, 93.8, 103.6, 101.2],
+      "async_save_small": [16.7, 18.2, 15.9, 17.5, 17.1],
+      "async_save_medium": [62.3, 67.9, 59.2, 65.4, 63.9],
+      "async_save_large": [134.5, 146.6, 127.8, 141.2, 137.9]
+    },
+    "serialization": {
+      "simple_object": [0.0023, 0.0025, 0.0022, 0.0024, 0.0023],
+      "complex_object": [0.0178, 0.0194, 0.0169, 0.0187, 0.0182],
+      "large_dataset": [0.1234, 0.1345, 0.1172, 0.1296, 0.1265]
+    },
+    "storage_types": {
+      "memory": [0.0023, 0.0025, 0.0022, 0.0024, 0.0023],
+      "redis": [0.0312, 0.0340, 0.0296, 0.0328, 0.0320],
+      "disk": [0.0456, 0.0497, 0.0433, 0.0479, 0.0468]
+    }
+  },
+  "crdt_telemetry": {
+    "update_operation_tracing_ms": [0.0234, 0.0255, 0.0222, 0.0246, 0.0240],
+    "merge_operation_tracing_ms": [0.0345, 0.0376, 0.0328, 0.0362, 0.0353],
+    "remove_operation_tracing_ms": [0.0289, 0.0315, 0.0275, 0.0303, 0.0296],
+    "append_operation_tracing_ms": [0.0267, 0.0291, 0.0254, 0.0280, 0.0274],
+    "clear_history_tracing_ms": [0.0132, 0.0144, 0.0125, 0.0139, 0.0136],
+    "logical_clock_overhead_ms": [0.0078, 0.0085, 0.0074, 0.0082, 0.0080]
   }
 }
