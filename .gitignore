@@ -181,7 +181,6 @@ dmypy.json
 
 .DS_Store
 
-# End of https://www.gitignore.io/api/python,pycharm
 /.idea/horao.iml
 /.idea/misc.xml
 /.idea/modules.xml
@@ -189,4 +188,5 @@ dmypy.json
 /.idea/vcs.xml
 .aider*
 .env
-.env
+
+.jupyter*

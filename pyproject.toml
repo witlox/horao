@@ -59,6 +59,7 @@ psutil = "^5.9.8"
 matplotlib = "^3.8.2"
 pandas = "^2.1.4"
 asyncio = "^3.4.3"
+jupyterlab = "^4.4.3"
 
 [tool.poetry.group.research]
 optional = true
