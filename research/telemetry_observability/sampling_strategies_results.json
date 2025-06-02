@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "test_name": "sampling_strategies",
+    "area": "telemetry_observability",
+    "timestamp": "2023-10-12T10:45:23.984576",
+    "version": "1.0.0"
+  },
+  "detection_rates": {
+    "error_baseline": {
+      "critical_errors": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      "high_priority": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      "medium_priority": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      "low_priority": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    },
+    "fixed_10_percent": {
+      "critical_errors": [1, 1, 0, 1, 0, 1, 0, 1, 1, 0],
+      "high_priority": [0, 1, 0, 1, 0, 0, 1, 0, 0, 1],
+      "medium_priority": [0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
+      "low_priority": [0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
+    },
+    "fixed_50_percent": {
+      "critical_errors": [1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+      "high_priority": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+      "medium_priority": [0, 1, 1, 0, 0, 1, 0, 1, 0, 1],
+      "low_priority": [1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
+    },
+    "adaptive": {
+      "critical_errors": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1],
+      "high_priority": [1, 0, 1, 1, 0, 1, 1, 0, 1, 1],
+      "medium_priority": [0, 1, 0, 1, 0, 1, 0, 0, 1, 0],
+      "low_priority": [0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+    }
+  },
+  "sampling_overhead": {
+    "baseline": {
+      "cpu_percentage": [12.5, 13.2, 12.8, 14.1, 13.5, 12.9, 14.3, 13.7, 12.6, 13.8],
+      "memory_mb": [245.7, 252.3, 248.9, 257.1, 250.5, 249.1, 258.6, 251.8, 246.2, 254.7],
+      "network_kbps": [187.3, 195.8, 190.2, 201.4, 193.6, 191.7, 203.5, 196.9, 188.5, 198.4],
+      "disk_io_kbps": [72.5, 76.8, 74.1, 79.2, 75.3, 73.8, 80.1, 77.2, 73.0, 78.4]
+    },
+    "fixed_10_percent": {
+      "cpu_percentage": [2.1, 2.4, 2.2, 2.5, 2.3, 2.1, 2.6, 2.4, 2.2, 2.5],
+      "memory_mb": [35.3, 37.6, 36.1, 38.2, 36.8, 35.7, 38.9, 37.5, 36.0, 37.8],
+      "network_kbps": [20.1, 22.4, 21.0, 22.8, 21.5, 20.6, 23.2, 22.1, 20.8, 22.5],
+      "disk_io_kbps": [9.8, 10.7, 10.2, 11.1, 10.5, 10.0, 11.3, 10.8, 10.1, 10.9]
+    },
+    "fixed_50_percent": {
+      "cpu_percentage": [6.7, 7.1, 6.9, 7.4, 7.2, 6.8, 7.5, 7.3, 6.8, 7.2],
+      "memory_mb": [127.1, 133.5, 129.8, 136.2, 132.1, 128.6, 137.8, 134.7, 128.3, 135.1],
+      "network_kbps": [94.5, 98.7, 96.3, 101.2, 97.8, 95.2, 102.4, 99.5, 95.0, 100.3],
+      "disk_io_kbps": [37.1, 38.9, 37.8, 40.1, 38.4, 37.3, 40.6, 39.2, 37.5, 39.5]
+    },
+    "adaptive": {
+      "cpu_percentage": [7.8, 8.2, 8.0, 8.5, 8.3, 7.9, 8.6, 8.4, 7.9, 8.3],
+      "memory_mb": [148.5, 155.4, 151.7, 158.9, 153.8, 150.2, 160.7, 156.8, 149.4, 157.5],
+      "network_kbps": [105.2, 110.1, 107.3, 112.8, 109.5, 106.4, 113.6, 111.2, 106.0, 112.0],
+      "disk_io_kbps": [42.3, 44.5, 43.2, 45.7, 44.1, 42.8, 46.2, 45.0, 42.6, 45.3]
+    }
+  },
+  "error_detection_summary": {
+    "baseline_total_detection_rate": 1.0,
+    "fixed_10_percent_detection_rate": {
+      "critical_errors": 0.6,
+      "high_priority": 0.4,
+      "medium_priority": 0.3,
+      "low_priority": 0.2,
+      "overall": 0.375
+    },
+    "fixed_50_percent_detection_rate": {
+      "critical_errors": 0.7,
+      "high_priority": 0.5,
+      "medium_priority": 0.5,
+      "low_priority": 0.4,
+      "overall": 0.525
+    },
+    "adaptive_detection_rate": {
+      "critical_errors": 0.9,
+      "high_priority": 0.7,
+      "medium_priority": 0.4,
+      "low_priority": 0.2,
+      "overall": 0.55
+    }
+  },
+  "resource_usage_summary": {
+    "baseline_normalized": 1.0,
+    "fixed_10_percent_normalized": 0.15,
+    "fixed_50_percent_normalized": 0.52,
+    "adaptive_normalized": 0.60
+  },
+  "recommendations": {
+    "low_traffic": "fixe

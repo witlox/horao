@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "test_name": "clock_drift",
+    "area": "distributed_systems_consistency",
+    "timestamp": "2023-09-17T09:15:33.429751",
+    "version": "1.0.0"
+  },
+  "node_measurements": [
+    {"node_id": "node-1", "drift_ms_per_hour": 2.3, "correction_attempts": 4, "successful_syncs": 4, "causal_violations": 0},
+    {"node_id": "node-2", "drift_ms_per_hour": -1.7, "correction_attempts": 3, "successful_syncs": 3, "causal_violations": 0},
+    {"node_id": "node-3", "drift_ms_per_hour": 4.5, "correction_attempts": 5, "successful_syncs": 4, "causal_violations": 1},
+    {"node_id": "node-4", "drift_ms_per_hour": -3.2, "correction_attempts": 4, "successful_syncs": 4, "causal_violations": 0},
+    {"node_id": "node-5", "drift_ms_per_hour": 1.8, "correction_attempts": 3, "successful_syncs": 3, "causal_violations": 0},
+    {"node_id": "node-6", "drift_ms_per_hour": -2.4, "correction_attempts": 4, "successful_syncs": 3, "causal_violations": 1},
+    {"node_id": "node-7", "drift_ms_per_hour": 3.1, "correction_attempts": 3, "successful_syncs": 3, "causal_violations": 0}
+  ],
+  "clock_synchronization": {
+    "protocol": "ntp",
+    "sync_interval_minutes": 15,
+    "max_tolerated_drift_ms": 10,
+    "timestamp_precision": "millisecond"
+  },
+  "event_ordering": {
+    "total_events": 1000,
+    "correct_causal_order": 987,
+    "incorrect_causal_order": 13,
+    "accuracy_percentage": 98.7
+  },
+  "summary": {
+    "average_drift_ms_per_hour": 0.63,
+    "total_causal_violations": 2,
+    "max_drift_observed_ms": 4.5,
+    "min_drift_observed_ms": -3.2
+  }
+}

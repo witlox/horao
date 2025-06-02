@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "test_name": "container_optimization",
+    "area": "devops_practices",
+    "timestamp": "2023-10-05T16:42:19.582341",
+    "version": "1.0.0"
+  },
+  "image_comparisons": [
+    {"image_name": "app-base", "original_size_mb": 865.3, "optimized_size_mb": 312.7, "build_time_seconds": 58.2, "startup_time_ms": 1245.8, "vulnerabilities_found": 8},
+    {"image_name": "web-frontend", "original_size_mb": 723.5, "optimized_size_mb": 224.1, "build_time_seconds": 44.6, "startup_time_ms": 982.3, "vulnerabilities_found": 5},
+    {"image_name": "api-service", "original_size_mb": 648.9, "optimized_size_mb": 196.4, "build_time_seconds": 39.8, "startup_time_ms": 875.6, "vulnerabilities_found": 4},
+    {"image_name": "database", "original_size_mb": 1245.7, "optimized_size_mb": 587.3, "build_time_seconds": 72.1, "startup_time_ms": 2345.9, "vulnerabilities_found": 12},
+    {"image_name": "cache-service", "original_size_mb": 456.3, "optimized_size_mb": 128.5, "build_time_seconds": 34.7, "startup_time_ms": 731.2, "vulnerabilities_found": 3}
+  ],
+  "optimization_techniques": {
+    "multi_stage_builds": {"applied": true, "size_reduction_percentage": 52.4},
+    "slim_base_images": {"applied": true, "size_reduction_percentage": 38.1},
+    "layer_optimization": {"applied": true, "size_reduction_percentage": 15.6},
+    "dependency_cleanup": {"applied": true, "size_reduction_percentage": 22.8}
+  },
+  "resource_usage": {
+    "cpu_usage_percentage": {"original": 24.7, "optimized": 18.2, "reduction_percentage": 26.3},
+    "memory_usage_mb": {"original": 843.5, "optimized": 567.8, "reduction_percentage": 32.7},
+    "io_operations": {"original": 2835, "optimized": 1935, "reduction_percentage": 31.7}
+  },
+  "summary": {
+    "average_size_reduction_percentage": 61.2,
+    "average_build_time_reduction_seconds": 12.5,
+    "average_startup_time_reduction_ms": 345.7,
+    "average_vulnerability_reduction": 6.2
+  }
+}
