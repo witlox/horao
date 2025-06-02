@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "test_name": "distributed_tracing",
+    "area": "telemetry_observability",
+    "timestamp": "2023-10-15T14:32:18.453291",
+    "version": "1.0.0"
+  },
+  "trace_propagation": {
+    "success_rate": 0.997,
+    "cross_service_success": 0.994,
+    "trace_completeness": 0.985,
+    "header_overhead_bytes": 218,
+    "latency_impact_ms": [0.32, 0.41, 0.38, 0.45, 0.36, 0.39, 0.43, 0.37, 0.40, 0.42]
+  },
+  "context_carriers": {
+    "http_headers": {
+      "success_rate": 0.999,
+      "extraction_time_ms": [0.12, 0.15, 0.13, 0.16, 0.14, 0.12, 0.17, 0.15, 0.13, 0.16]
+    },
+    "grpc_metadata": {
+      "success_rate": 0.998,
+      "extraction_time_ms": [0.09, 0.11, 0.10, 0.12, 0.11, 0.09, 0.13, 0.11, 0.10, 0.12]
+    },
+    "message_queues": {
+      "success_rate": 0.991,
+      "extraction_time_ms": [0.18, 0.21, 0.19, 0.23, 0.20, 0.18, 0.24, 0.21, 0.19, 0.22]
+    }
+  },
+  "trace_sampling": {
+    "parent_based": {
+      "consistency_percentage": 99.8,
+      "overhead_ms": [0.05, 0.07, 0.06, 0.08, 0.07, 0.05, 0.09, 0.07, 0.06, 0.08]
+    },
+    "rate_limited": {
+      "consistency_percentage": 95.2,
+      "overhead_ms": [0.03, 0.05, 0.04, 0.06, 0.05, 0.03, 0.07, 0.05, 0.04, 0.06]
+    }
+  },
+  "error_scenarios": {
+    "service_unavailable": {
+      "trace_completion_rate": 0.92,
+      "error_identification_success": 0.98
+    },
+    "timeout_scenarios": {
+      "trace_completion_rate": 0.89,
+      "error_identification_success": 0.95
+    },
+    "payload_corruption": {
+      "trace_completion_rate": 0.87,
+      "error_identification_success": 0.93
+    }
+  },
+  "performance_impact": {
+    "cpu_overhead_percent": [1.45, 1.62, 1.57, 1.70, 1.59, 1.48, 1.73, 1.65, 1.51, 1.67],
+    "memory_overhead_mb": [48.2, 53.1, 50.7, 55.8, 51.9, 49.3, 56.5, 52.6, 49.8, 54.2],
+    "network_overhead_percent": [0.82, 0.91, 0.87, 0.95, 0.89, 0.83, 0.97, 0.92, 0.85, 0.94]
+  },
+  "summary": {
+    "average_trace_propagation_success": 0.992,
+    "average_latency_impact_ms": 0.393,
+    "average_cpu_overhead_percent": 1.597,
+    "average_memory_overhead_mb": 52.21,
+    "recommendation": "Implement parent-based sampling with a 10% base rate for optimal balance between observability and performance"
+  }
+}
