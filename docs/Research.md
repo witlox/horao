@@ -2,6 +2,12 @@
 
 This document provides an overview of the research module in the HORAO project, which contains various validation suites for different aspects of distributed systems.
 
+In order to install the corresponding libraries for research, execute the following:
+```bash
+poetry install --with research
+```
+
+
 ## Research Structure
 
 The `research` folder is organized into several subdirectories, each focusing on a specific research area related to distributed systems:
